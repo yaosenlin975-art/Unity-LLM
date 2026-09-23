@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : LLM 调度器                    │
- * │ Remark      : 全局单例，Provider 注册 +      │
- * │               主/备降级 + 请求日志事件       │
- * │ ClassName   : LLMDispatcher                 │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: LLM 调度器
+│　Remark: 全局单例，Provider 注册 +
+│　　　　　 主/备降级 + 请求日志事件
+│　ClassName: LLMDispatcher
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

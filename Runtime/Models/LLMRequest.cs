@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : LLM 请求结构                  │
- * │ Remark      : 系统提示词与上下文注入槽位      │
- * │ ClassName   : LLMRequest                    │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: LLM 请求结构
+│　Remark: 系统提示词与上下文注入槽位
+│　ClassName: LLMRequest
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

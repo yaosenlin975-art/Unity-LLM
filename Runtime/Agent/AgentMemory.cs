@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 记忆：事实槽与记忆动作   │
- * │ Remark      : 只做结构化事实槽，不做向量检索 │
- * │               与反思式记忆（ADR-005）        │
- * │ ClassName   : AgentMemory                   │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 记忆：事实槽与记忆动作
+│　Remark: 只做结构化事实槽，不做向量检索
+│　　　　　 与反思式记忆（ADR-005）
+│　ClassName: AgentMemory
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

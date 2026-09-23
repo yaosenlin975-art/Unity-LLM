@@ -1,12 +1,12 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : AgentHost 自定义 Inspector     │
- * │ Remark      : 暴露每个实例的工具门控开关、    │
- * │               “扫描并同步”与成员组件快速添加、│
- * │               只读的持久化记忆（事实槽）展示  │
- * │ ClassName   : AgentHostInspector            │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: AgentHost 自定义 Inspector
+│　Remark: 暴露每个实例的工具门控开关、
+│　　　　　 “扫描并同步”与成员组件快速添加、
+│　　　　　 只读的持久化记忆（事实槽）展示
+│　ClassName: AgentHostInspector
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

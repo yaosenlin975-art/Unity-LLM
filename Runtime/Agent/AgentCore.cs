@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 运行内核                │
- * │ Remark      : 触发与串行排队、代际作废、墙钟 │
- * │               额度、轮次编排与轨迹          │
- * │ ClassName   : AgentCore                     │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 运行内核
+│　Remark: 触发与串行排队、代际作废、墙钟
+│　　　　　 额度、轮次编排与轨迹
+│　ClassName: AgentCore
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

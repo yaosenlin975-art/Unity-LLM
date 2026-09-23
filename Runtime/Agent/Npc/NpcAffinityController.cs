@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 好感状态与模型动作         │
- * │ Remark      : 模型变化单轮限幅，游戏变化走   │
- * │               同一事务但不受 ±20 限制        │
- * │ ClassName   : NpcAffinityController          │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 好感状态与模型动作
+│　Remark: 模型变化单轮限幅，游戏变化走
+│　　　　　 同一事务但不受 ±20 限制
+│　ClassName: NpcAffinityController
+└────────────────────────────┘
+*/
 
 using System;
 using System.Threading;

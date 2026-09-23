@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 好感状态与动作测试        │
- * │ Remark      : 覆盖模型单轮上限、事务回滚与   │
- * │               sessionId 隔离                  │
- * │ ClassName   : NpcAffinityTests               │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 好感状态与动作测试
+│　Remark: 覆盖模型单轮上限、事务回滚与
+│　　　　　 sessionId 隔离
+│　ClassName: NpcAffinityTests
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using System.Threading;

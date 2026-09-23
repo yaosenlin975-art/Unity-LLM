@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 动画工具与动作            │
- * │ Remark      : 只转发给同层级的 IAgentAnimationDriver，│
- * │               本文件不认识 Animator 也不认识 AnimGraph │
- * │ ClassName   : AgentAnimationTools            │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 动画工具与动作
+│　Remark: 只转发给同层级的 IAgentAnimationDriver，
+│　　　　　 本文件不认识 Animator 也不认识 AnimGraph
+│　ClassName: AgentAnimationTools
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using Cysharp.Text;

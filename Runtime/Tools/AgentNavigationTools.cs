@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 导航工具                 │
- * │ Remark      : 通过 NavMeshAgent 查询与移动     │
- * │ ClassName   : AgentNavigationTools           │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 导航工具
+│　Remark: 通过 NavMeshAgent 查询与移动
+│　ClassName: AgentNavigationTools
+└────────────────────────────┘
+*/
 
 using Cysharp.Text;
 using Cysharp.Threading.Tasks;

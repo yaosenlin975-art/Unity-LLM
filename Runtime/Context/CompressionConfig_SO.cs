@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 上下文阈值与压缩配置          │
- * │ Remark      : 轮数模式 / token 模式二选一，  │
- * │               token 模式由 ContextWindowTokens>0 启用 │
- * │ ClassName   : CompressionConfig_SO          │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 上下文阈值与压缩配置
+│　Remark: 轮数模式 / token 模式二选一，
+│　　　　　 token 模式由 ContextWindowTokens>0 启用
+│　ClassName: CompressionConfig_SO
+└────────────────────────────┘
+*/
 
 using UnityEngine;
 

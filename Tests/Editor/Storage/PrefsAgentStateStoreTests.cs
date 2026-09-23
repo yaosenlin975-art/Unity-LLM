@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : PrefsAgentStateStore 存储测试  │
- * │ Remark      : PrefsHelper 按类型静态缓存归档， │
- * │               故这里测接口接线而非磁盘落地   │
- * │ ClassName   : PrefsAgentStateStoreTests     │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: PrefsAgentStateStore 存储测试
+│　Remark: PrefsHelper 按类型静态缓存归档，
+│　　　　　 故这里测接口接线而非磁盘落地
+│　ClassName: PrefsAgentStateStoreTests
+└────────────────────────────┘
+*/
 
 using System;
 using Cysharp.Text;

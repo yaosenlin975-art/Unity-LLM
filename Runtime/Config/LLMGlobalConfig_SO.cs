@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : LLM 全局配置：选实现与装配     │
- * │ Remark      : 只做选择与引用，不搬既有 SO 字段 │
- * │               （ADR-014）                   │
- * │ ClassName   : LLMGlobalConfig_SO            │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: LLM 全局配置：选实现与装配
+│　Remark: 只做选择与引用，不搬既有 SO 字段
+│　　　　　 （ADR-014）
+│　ClassName: LLMGlobalConfig_SO
+└────────────────────────────┘
+*/
 
 using UnityEngine;
 
@@ -16,7 +16,7 @@ namespace LLM.Runtime
         /// <summary>不持久化，等同状态接口化之前的行为</summary>
         None,
 
-        /// <summary>Lin 的 PrefsHelper 归档</summary>
+        /// <summary>独立包 com.lin.runtime-prefs-helper 的 PrefsHelper 归档</summary>
         Prefs
     }
 

@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : AgentHost 场景宿主测试         │
- * │ Remark      : 生命周期、输入转发与核心快照    │
- * │ ClassName   : AgentHostTests                 │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: AgentHost 场景宿主测试
+│　Remark: 生命周期、输入转发与核心快照
+│　ClassName: AgentHostTests
+└────────────────────────────┘
+*/
 
 using LLM.Runtime;
 using LLM.Runtime.Agent;

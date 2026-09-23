@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 通用工具测试              │
- * │ Remark      : 注册、层级扫描与契约行为        │
- * │ ClassName   : AgentCommonToolsTests          │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 通用工具测试
+│　Remark: 注册、层级扫描与契约行为
+│　ClassName: AgentCommonToolsTests
+└────────────────────────────┘
+*/
 
 using System;
 using System.Globalization;

@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Runtime 测试命令白名单注册表   │
- * │ Remark      : 只按命令 ID 调用显式标记方法    │
- * │ ClassName   : RuntimeTestCommandRegistry     │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Runtime 测试命令白名单注册表
+│　Remark: 只按命令 ID 调用显式标记方法
+│　ClassName: RuntimeTestCommandRegistry
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

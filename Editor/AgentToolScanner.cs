@@ -1,13 +1,13 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 编辑器工具发现                 │
- * │ Remark      : LLM.Editor 编译期引用不到游戏  │
- * │               程序集，只能在编辑期反射发现并  │
- * │               登记引用 LLM.Runtime 的程序集； │
- * │               另枚举可挂载的成员工具组件     │
- * │ ClassName   : AgentToolScanner              │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 编辑器工具发现
+│　Remark: LLM.Editor 编译期引用不到游戏
+│　　　　　 程序集，只能在编辑期反射发现并
+│　　　　　 登记引用 LLM.Runtime 的程序集；
+│　　　　　 另枚举可挂载的成员工具组件
+│　ClassName: AgentToolScanner
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

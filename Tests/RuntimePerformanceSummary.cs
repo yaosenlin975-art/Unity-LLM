@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Runtime 性能采样摘要           │
- * │ Remark      : 纯计算，空窗口明确不可用       │
- * │ ClassName   : RuntimePerformanceSummary      │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Runtime 性能采样摘要
+│　Remark: 纯计算，空窗口明确不可用
+│　ClassName: RuntimePerformanceSummary
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

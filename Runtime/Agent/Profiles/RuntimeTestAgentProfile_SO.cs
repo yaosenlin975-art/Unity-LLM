@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Runtime 游戏测试 Agent 配置    │
- * │ Remark      : 测试纪律与场景预算的稳定前缀    │
- * │ ClassName   : RuntimeTestAgentProfile_SO     │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Runtime 游戏测试 Agent 配置
+│　Remark: 测试纪律与场景预算的稳定前缀
+│　ClassName: RuntimeTestAgentProfile_SO
+└────────────────────────────┘
+*/
 
 using Cysharp.Text;
 using UnityEngine;

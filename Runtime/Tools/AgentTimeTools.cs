@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 时间工具                 │
- * │ Remark      : 提供本机本地时间查询            │
- * │ ClassName   : AgentTimeTools                │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 时间工具
+│　Remark: 提供本机本地时间查询
+│　ClassName: AgentTimeTools
+└────────────────────────────┘
+*/
 
 using System;
 using Cysharp.Text;

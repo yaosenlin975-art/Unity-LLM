@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Windows 测试窗口绑定与输入      │
- * │ Remark      : 只接受 runner 首次绑定的窗口    │
- * │ ClassName   : RuntimeTestWindowBinding       │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Windows 测试窗口绑定与输入
+│　Remark: 只接受 runner 首次绑定的窗口
+│　ClassName: RuntimeTestWindowBinding
+└────────────────────────────┘
+*/
 
 using System;
 using System.Threading;

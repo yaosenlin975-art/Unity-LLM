@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 确定性规则意图分类器          │
- * │ Remark      : 只吐抽象意图，不碰动作目录    │
- * │ ClassName   : RuleGestureIntentClassifier   │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 确定性规则意图分类器
+│　Remark: 只吐抽象意图，不碰动作目录
+│　ClassName: RuleGestureIntentClassifier
+└────────────────────────────┘
+*/
 
 namespace LLM.Runtime.Agent.Npc
 {

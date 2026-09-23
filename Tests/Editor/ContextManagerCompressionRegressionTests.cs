@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 上下文压缩回归测试             │
- * │ Remark      : 短对话也必须进入折叠区           │
- * │ ClassName   : ContextManagerCompressionRegressionTests │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 上下文压缩回归测试
+│　Remark: 短对话也必须进入折叠区
+│　ClassName: ContextManagerCompressionRegressionTests
+└────────────────────────────┘
+*/
 
 using System.Reflection;
 using System.IO;

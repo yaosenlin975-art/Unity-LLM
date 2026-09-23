@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 对话上下文管理器              │
- * │ Remark      : 轮数/token 双模式阈值 + 分区   │
- * │               折叠 + LLM 摘要 + 归档         │
- * │ ClassName   : ContextManager                │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 对话上下文管理器
+│　Remark: 轮数/token 双模式阈值 + 分区
+│　　　　　 折叠 + LLM 摘要 + 归档
+│　ClassName: ContextManager
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

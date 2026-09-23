@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 入参格式闸与回灌配额测试       │
- * │ Remark      : 坏参数必须被拦下并指名参数，   │
- * │               不得静默按默认值执行          │
- * │ ClassName   : AgentArgumentGateTests        │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 入参格式闸与回灌配额测试
+│　Remark: 坏参数必须被拦下并指名参数，
+│　　　　　 不得静默按默认值执行
+│　ClassName: AgentArgumentGateTests
+└────────────────────────────┘
+*/
 
 using System.Reflection;
 using LLM.Runtime.Agent;

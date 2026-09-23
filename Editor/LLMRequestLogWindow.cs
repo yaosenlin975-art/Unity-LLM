@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : LLM 请求日志窗口              │
- * │ Remark      : 订阅 LLMDispatcher.OnRequest  │
- * │               Completed，显示用量与工具调用  │
- * │ ClassName   : LLMRequestLogWindow           │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: LLM 请求日志窗口
+│　Remark: 订阅 LLMDispatcher.OnRequest
+│　　　　　 Completed，显示用量与工具调用
+│　ClassName: LLMRequestLogWindow
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 内核取状态存储的唯一入口       │
- * │ Remark      : 默认 Null，由 LLMRuntimeSettings │
- * │               .Install() 换上真实实现       │
- * │ ClassName   : AgentStateStores              │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 内核取状态存储的唯一入口
+│　Remark: 默认 Null，由 LLMRuntimeSettings
+│　　　　　 .Install() 换上真实实现
+│　ClassName: AgentStateStores
+└────────────────────────────┘
+*/
 
 namespace LLM.Runtime.Storage
 {

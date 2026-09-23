@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : LLM 流式输出 chunk            │
- * │ Remark      : content 与 tool_call 增量分开；│
- * │               usage 落在 choices 为空的独立 chunk 上（见 OpenAIProvider.ParseStreamChunk）│
- * │ ClassName   : LLMStreamChunk                │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: LLM 流式输出 chunk
+│　Remark: content 与 tool_call 增量分开；
+│　　　　　 usage 落在 choices 为空的独立 chunk 上（见 OpenAIProvider.ParseStreamChunk）
+│　ClassName: LLMStreamChunk
+└────────────────────────────┘
+*/
 
 using System;
 

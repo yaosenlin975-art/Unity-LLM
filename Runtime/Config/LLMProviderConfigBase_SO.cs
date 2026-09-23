@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Provider 配置的抽象基类        │
- * │ Remark      : 全局配置只认这个类型，新增      │
- * │               Provider 不必改装配根（ADR-014）│
- * │ ClassName   : LLMProviderConfigBase_SO      │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Provider 配置的抽象基类
+│　Remark: 全局配置只认这个类型，新增
+│　　　　　 Provider 不必改装配根（ADR-014）
+│　ClassName: LLMProviderConfigBase_SO
+└────────────────────────────┘
+*/
 
 using Cysharp.Text;
 using UnityEngine;

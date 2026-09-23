@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : OpenAIProvider 流式解析测试    │
- * │ Remark      : 网关把不适用字段写成 JSON null │
- * │               时不得抛异常掐断整条流         │
- * │ ClassName   : OpenAIProviderStreamParseTests│
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: OpenAIProvider 流式解析测试
+│　Remark: 网关把不适用字段写成 JSON null
+│　　　　　 时不得抛异常掐断整条流
+│　ClassName: OpenAIProviderStreamParseTests
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using System.Reflection;

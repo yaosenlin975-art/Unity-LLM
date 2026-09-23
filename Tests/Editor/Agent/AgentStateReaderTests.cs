@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : AgentStateReader 单元测试      │
- * │ Remark      : 覆盖存档键复现与事实读取容错，  │
- * │               不含 UI 层                      │
- * │ ClassName   : AgentStateReaderTests         │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: AgentStateReader 单元测试
+│　Remark: 覆盖存档键复现与事实读取容错，
+│　　　　　 不含 UI 层
+│　ClassName: AgentStateReaderTests
+└────────────────────────────┘
+*/
 
 using Cysharp.Text;
 using Lin.Runtime.Helper;

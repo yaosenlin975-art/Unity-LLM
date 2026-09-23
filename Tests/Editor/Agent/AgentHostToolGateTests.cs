@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : AgentHost 工具门控测试         │
- * │ Remark      : 覆盖式语义、声明层过滤与执行期  │
- * │               拒绝三层都验一遍               │
- * │ ClassName   : AgentHostToolGateTests        │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: AgentHost 工具门控测试
+│　Remark: 覆盖式语义、声明层过滤与执行期
+│　　　　　 拒绝三层都验一遍
+│　ClassName: AgentHostToolGateTests
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using LLM.Runtime;

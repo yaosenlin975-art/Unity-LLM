@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 上下文压缩器                  │
- * │ Remark      : 结构化摘要 + 单次 LLM 调用 +   │
- * │               机械降级（无 LLM 也能收尾）    │
- * │ ClassName   : ContextCompressor             │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 上下文压缩器
+│　Remark: 结构化摘要 + 单次 LLM 调用 +
+│　　　　　 机械降级（无 LLM 也能收尾）
+│　ClassName: ContextCompressor
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

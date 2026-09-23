@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 人设资产的中文 Inspector │
- * │ Remark      : 原生没有字段级 Label 特性，只 │
- * │               有 InspectorName 且它只管枚举  │
- * │ ClassName   : AgentProfileInspector          │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 人设资产的中文 Inspector
+│　Remark: 原生没有字段级 Label 特性，只
+│　　　　　 有 InspectorName 且它只管枚举
+│　ClassName: AgentProfileInspector
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using LLM.Runtime.Agent;

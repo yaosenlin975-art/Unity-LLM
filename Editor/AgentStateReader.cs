@@ -1,12 +1,12 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 编辑器侧读取持久化 Agent 记忆   │
- * │ Remark      : 纯逻辑无 UI，供 Inspector 调用  │
- * │               与运行期 PrefsAgentStateStore  │
- * │               走同一条读取路径               │
- * │ ClassName   : AgentStateReader              │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 编辑器侧读取持久化 Agent 记忆
+│　Remark: 纯逻辑无 UI，供 Inspector 调用
+│　　　　　 与运行期 PrefsAgentStateStore
+│　　　　　 走同一条读取路径
+│　ClassName: AgentStateReader
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

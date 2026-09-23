@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 成员工具/动作集合测试          │
- * │ Remark      : 层级扫描、per-agent 收集、打  │
- * │               在实例上执行、全局静态可选纳入 │
- * │ ClassName   : AgentToolSetTests             │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 成员工具/动作集合测试
+│　Remark: 层级扫描、per-agent 收集、打
+│　　　　　 在实例上执行、全局静态可选纳入
+│　ClassName: AgentToolSetTests
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using LLM.Runtime;

@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : RuntimeTesting 最小闭环测试    │
- * │ Remark      : 只覆盖白名单、摘要与安全门槛    │
- * │ ClassName   : RuntimeTestingTests            │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: RuntimeTesting 最小闭环测试
+│　Remark: 只覆盖白名单、摘要与安全门槛
+│　ClassName: RuntimeTestingTests
+└────────────────────────────┘
+*/
 
 using System;
 using System.Reflection;

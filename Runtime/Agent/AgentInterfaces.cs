@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 内核与宿主的窄接口        │
- * │ Remark      : 不携带任何宿主具体类型，NPC 与  │
- * │               对话助手共用同一套内核          │
- * │ ClassName   : IWorldContextProvider         │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 内核与宿主的窄接口
+│　Remark: 不携带任何宿主具体类型，NPC 与
+│　　　　　 对话助手共用同一套内核
+│　ClassName: IWorldContextProvider
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using System.Threading;

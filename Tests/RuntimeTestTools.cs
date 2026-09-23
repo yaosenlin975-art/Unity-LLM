@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Runtime 测试成员工具门控组件    │
- * │ Remark      : 只在 Editor/Development 注册    │
- * │ ClassName   : RuntimeTestTools               │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Runtime 测试成员工具门控组件
+│　Remark: 只在 Editor/Development 注册
+│　ClassName: RuntimeTestTools
+└────────────────────────────┘
+*/
 
 using System;
 using System.Threading;

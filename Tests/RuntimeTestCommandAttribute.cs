@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Runtime 测试命令白名单特性     │
- * │ Remark      : 命令必须显式声明稳定 ID        │
- * │ ClassName   : RuntimeTestCommandAttribute    │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Runtime 测试命令白名单特性
+│　Remark: 命令必须显式声明稳定 ID
+│　ClassName: RuntimeTestCommandAttribute
+└────────────────────────────┘
+*/
 
 using System;
 

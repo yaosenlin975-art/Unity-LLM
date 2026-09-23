@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 状态存储抽象            │
- * │ Remark      : 事实槽与会话轮次各一个接口，   │
- * │               载荷使用强类型 Blob（ADR-029）│
- * │ ClassName   : AgentStorageInterfaces        │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 状态存储抽象
+│　Remark: 事实槽与会话轮次各一个接口，
+│　　　　　 载荷使用强类型 Blob（ADR-029）
+│　ClassName: AgentStorageInterfaces
+└────────────────────────────┘
+*/
 
 using System.Threading;
 using Cysharp.Threading.Tasks;

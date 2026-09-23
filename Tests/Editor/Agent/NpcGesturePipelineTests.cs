@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 流式动作管线纯逻辑测试    │
- * │ Remark      : 不创建 Unity 原生对象，离线可跑 │
- * │ ClassName   : NpcGesturePipelineTests       │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 流式动作管线纯逻辑测试
+│　Remark: 不创建 Unity 原生对象，离线可跑
+│　ClassName: NpcGesturePipelineTests
+└────────────────────────────┘
+*/
 
 using LLM.Runtime;
 using LLM.Runtime.Agent;

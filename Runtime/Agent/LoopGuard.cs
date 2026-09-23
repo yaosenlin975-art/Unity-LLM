@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 工具级循环检测                │
- * │ Remark      : NameCap 同名换参 + L2 同参 + │
- * │               L3 零新信息；幂等重复封顶 Block│
- * │ ClassName   : LoopGuard                     │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 工具级循环检测
+│　Remark: NameCap 同名换参 + L2 同参 +
+│　　　　　 L3 零新信息；幂等重复封顶 Block
+│　ClassName: LoopGuard
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

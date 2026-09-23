@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 场景生命周期宿主         │
- * │ Remark      : 将 MonoBehaviour 生命周期映射到 │
- * │               唯一 AgentCore                 │
- * │ ClassName   : AgentHost                      │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 场景生命周期宿主
+│　Remark: 将 MonoBehaviour 生命周期映射到
+│　　　　　 唯一 AgentCore
+│　ClassName: AgentHost
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

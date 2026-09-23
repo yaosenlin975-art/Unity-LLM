@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 本地说话动作检索器        │
- * │ Remark      : 硬过滤后按权重与最近使用选择   │
- * │ ClassName   : GestureResolver               │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 本地说话动作检索器
+│　Remark: 硬过滤后按权重与最近使用选择
+│　ClassName: GestureResolver
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 

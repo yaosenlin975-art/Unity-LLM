@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 派生 Agent Profile 行为测试    │
- * │ Remark      : 固定系统提示词与开场白历史语义  │
- * │ ClassName   : AgentDerivedProfileTests       │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 派生 Agent Profile 行为测试
+│　Remark: 固定系统提示词与开场白历史语义
+│　ClassName: AgentDerivedProfileTests
+└────────────────────────────┘
+*/
 
 using LLM.Runtime.Agent;
 using NUnit.Framework;

@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 说话动作目录与节奏配置    │
- * │ Remark      : 纯本地资源，不进入模型上下文  │
- * │ ClassName   : NpcGestureCatalog_SO          │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 说话动作目录与节奏配置
+│　Remark: 纯本地资源，不进入模型上下文
+│　ClassName: NpcGestureCatalog_SO
+└────────────────────────────┘
+*/
 
 using System;
 using UnityEngine;

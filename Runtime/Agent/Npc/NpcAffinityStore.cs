@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 好感持久化窄接口           │
- * │ Remark      : 好感独立于事实槽与会话历史，   │
- * │               由装配根或玩法侧注入实现       │
- * │ ClassName   : NpcAffinityStore              │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 好感持久化窄接口
+│　Remark: 好感独立于事实槽与会话历史，
+│　　　　　 由装配根或玩法侧注入实现
+│　ClassName: NpcAffinityStore
+└────────────────────────────┘
+*/
 
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -44,7 +44,7 @@ namespace LLM.Runtime.Agent.Npc
         }
     }
 
-    /// <summary>本地实现复用 Lin 的 PrefsHelper；载荷类型独立，避免与事实槽互相覆盖。</summary>
+    /// <summary>本地实现复用 PrefsHelper（独立包 com.lin.runtime-prefs-helper）；载荷类型独立，避免与事实槽互相覆盖。</summary>
     public sealed class PrefsNpcAffinityStore : INpcAffinityStore
     {
         public string Load(string sessionId)

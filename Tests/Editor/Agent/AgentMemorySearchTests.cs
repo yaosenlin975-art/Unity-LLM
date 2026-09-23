@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 记忆搜索测试             │
- * │ Remark      : 只检索当前上下文不可见的旧对话  │
- * │ ClassName   : AgentMemorySearchTests        │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 记忆搜索测试
+│　Remark: 只检索当前上下文不可见的旧对话
+│　ClassName: AgentMemorySearchTests
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

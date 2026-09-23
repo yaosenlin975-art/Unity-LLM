@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : OpenAI 兼容供应商实现         │
- * │ Remark      : content + tool_calls 双通道   │
- * │               SSE 流式解析；支持任意兼容网关 │
- * │ ClassName   : OpenAIProvider                │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: OpenAI 兼容供应商实现
+│　Remark: content + tool_calls 双通道
+│　　　　　 SSE 流式解析；支持任意兼容网关
+│　ClassName: OpenAIProvider
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

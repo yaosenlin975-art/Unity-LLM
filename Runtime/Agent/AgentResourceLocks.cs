@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 跨 agent 资源锁               │
- * │ Remark      : 同 key FIFO 排队、等待超时与退 │
- * │               队。释放只走 LockLease.Dispose │
- * │ ClassName   : AgentResourceLocks            │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 跨 agent 资源锁
+│　Remark: 同 key FIFO 排队、等待超时与退
+│　　　　　 队。释放只走 LockLease.Dispose
+│　ClassName: AgentResourceLocks
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

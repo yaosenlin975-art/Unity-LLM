@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 在线 LLM 会话                 │
- * │ Remark      : 系统提示词/上下文注入 + 流式    │
- * │               + Tool Calling 多轮循环 + 历史压缩 │
- * │ ClassName   : LLMSession                    │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 在线 LLM 会话
+│　Remark: 系统提示词/上下文注入 + 流式
+│　　　　　 + Tool Calling 多轮循环 + 历史压缩
+│　ClassName: LLMSession
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

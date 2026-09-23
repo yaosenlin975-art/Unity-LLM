@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 流式文本短句切分器            │
- * │ Remark      : 标点/长度/停顿三条边界，不逐  │
- * │               token 判定，避免姿态抖动      │
- * │ ClassName   : GestureClauseSegmenter        │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 流式文本短句切分器
+│　Remark: 标点/长度/停顿三条边界，不逐
+│　　　　　 token 判定，避免姿态抖动
+│　ClassName: GestureClauseSegmenter
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 

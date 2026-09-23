@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 人设与运行参数          │
- * │ Remark      : [Range] 只是配置面板护栏，真正 │
- * │               的运行时截断见设计稿默认值总表  │
- * │ ClassName   : AgentProfile_SO               │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 人设与运行参数
+│　Remark: [Range] 只是配置面板护栏，真正
+│　　　　　 的运行时截断见设计稿默认值总表
+│　ClassName: AgentProfile_SO
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

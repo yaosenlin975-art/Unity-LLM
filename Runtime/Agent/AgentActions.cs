@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 动作声明、注册表与执行器 │
- * │ Remark      : [AgentAction] 与 [Tool] 分家： │
- * │               动作异步、要上下文、绝不进注册表│
- * │ ClassName   : AgentActionRegistry           │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 动作声明、注册表与执行器
+│　Remark: [AgentAction] 与 [Tool] 分家：
+│　　　　　 动作异步、要上下文、绝不进注册表
+│　ClassName: AgentActionRegistry
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

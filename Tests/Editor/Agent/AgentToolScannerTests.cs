@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 成员工具候选枚举单元测试       │
- * │ Remark      : 覆盖 Inspector「快速添加」的过 │
- * │               滤与摊平规则，只验规则不验 UI  │
- * │ ClassName   : AgentToolScannerTests         │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 成员工具候选枚举单元测试
+│　Remark: 覆盖 Inspector「快速添加」的过
+│　　　　　 滤与摊平规则，只验规则不验 UI
+│　ClassName: AgentToolScannerTests
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

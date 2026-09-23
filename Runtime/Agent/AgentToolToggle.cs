@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 工具开关条目             │
- * │ Remark      : 挂在 AgentHost 上，按实例控制  │
- * │               该 agent 可见与可执行的工具    │
- * │ ClassName   : AgentToolToggle               │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 工具开关条目
+│　Remark: 挂在 AgentHost 上，按实例控制
+│　　　　　 该 agent 可见与可执行的工具
+│　ClassName: AgentToolToggle
+└────────────────────────────┘
+*/
 
 using System;
 

@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 本地持久化：复用 Lin 的 PrefsHelper │
- * │ Remark      : 两个载荷类型 = 两份归档，事实与 │
- * │               轮次两条写路径互不覆盖（ADR-014）│
- * │ ClassName   : PrefsAgentStateStore          │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 本地持久化：复用 PrefsHelper 归档
+│　Remark: 两个载荷类型 = 两份归档，事实与
+│　　　　　 轮次两条写路径互不覆盖（ADR-014）
+│　ClassName: PrefsAgentStateStore
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

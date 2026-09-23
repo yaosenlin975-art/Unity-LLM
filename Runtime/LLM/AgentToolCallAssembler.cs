@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Tool Call 流式拼装器          │
- * │ Remark      : 工具调用的 JSON 参数按 chunk   │
- * │               分片到达，按 index 分槽累加    │
- * │ ClassName   : ToolCallAssembler             │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Tool Call 流式拼装器
+│　Remark: 工具调用的 JSON 参数按 chunk
+│　　　　　 分片到达，按 index 分槽累加
+│　ClassName: ToolCallAssembler
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using Cysharp.Text;

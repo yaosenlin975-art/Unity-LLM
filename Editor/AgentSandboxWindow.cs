@@ -1,14 +1,14 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : Agent 对话沙盒窗口            │
- * │ Remark      : AgentCore 驱动 + AgentTrace    │
- * │               订阅 + 输入框起轮 + 输出区；   │
- * │               时钟泵只挂在 AgentHost 上（非   │
- * │               Play 与沙盒核心都不 tick），    │
- * │               起轮只由输入 Trigger/Notify 驱动 │
- * │ ClassName   : AgentSandboxWindow            │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: Agent 对话沙盒窗口
+│　Remark: AgentCore 驱动 + AgentTrace
+│　　　　　 订阅 + 输入框起轮 + 输出区；
+│　　　　　 时钟泵只挂在 AgentHost 上（非
+│　　　　　 Play 与沙盒核心都不 tick），
+│　　　　　 起轮只由输入 Trigger/Notify 驱动
+│　ClassName: AgentSandboxWindow
+└────────────────────────────┘
+*/
 
 using System;
 using System.Collections.Generic;

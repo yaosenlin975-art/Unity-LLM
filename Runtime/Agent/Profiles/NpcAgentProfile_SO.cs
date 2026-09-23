@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC Agent 静态人设配置          │
- * │ Remark      : 固定角色规则先于策划补充设定    │
- * │ ClassName   : NpcAgentProfile_SO             │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC Agent 静态人设配置
+│　Remark: 固定角色规则先于策划补充设定
+│　ClassName: NpcAgentProfile_SO
+└────────────────────────────┘
+*/
 
 using Cysharp.Text;
 using LLM.Runtime.Agent.Npc;

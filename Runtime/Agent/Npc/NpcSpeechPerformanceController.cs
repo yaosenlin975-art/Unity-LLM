@@ -1,10 +1,10 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : NPC 流式台词肢体表现导演      │
- * │ Remark      : 旁路监听文本，不产生工具调用  │
- * │ ClassName   : NpcSpeechPerformanceController│
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: NPC 流式台词肢体表现导演
+│　Remark: 旁路监听文本，不产生工具调用
+│　ClassName: NpcSpeechPerformanceController
+└────────────────────────────┘
+*/
 
 using UnityEngine;
 

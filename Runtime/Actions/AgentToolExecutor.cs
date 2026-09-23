@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 工具执行注入点                │
- * │ Remark      : LLMSession 把 tool_call 交给   │
- * │               外部执行的口子 + 默认同步实现   │
- * │ ClassName   : SyncToolRegistryExecutor      │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 工具执行注入点
+│　Remark: LLMSession 把 tool_call 交给
+│　　　　　 外部执行的口子 + 默认同步实现
+│　ClassName: SyncToolRegistryExecutor
+└────────────────────────────┘
+*/
 
 using System.Threading;
 using Cysharp.Threading.Tasks;

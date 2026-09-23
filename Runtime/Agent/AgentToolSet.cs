@@ -1,11 +1,11 @@
 /*
- * ┌────────────────────────────────────────────┐
- * │ Description : 单 agent 的成员工具/动作集合   │
- * │ Remark      : 由宿主扫描自身层级收集，per-  │
- * │               agent 私有，不进全局注册表     │
- * │ ClassName   : AgentToolSet                  │
- * └────────────────────────────────────────────┘
- */
+┌────────────────────────────┐
+│　Description: 单 agent 的成员工具/动作集合
+│　Remark: 由宿主扫描自身层级收集，per-
+│　　　　　 agent 私有，不进全局注册表
+│　ClassName: AgentToolSet
+└────────────────────────────┘
+*/
 
 using System.Collections.Generic;
 using UnityEngine;
