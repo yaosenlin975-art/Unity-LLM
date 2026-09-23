@@ -9,7 +9,9 @@
 
 using Cysharp.Text;
 using Lin.Runtime.Helper;
+using LLM.Demo.Storage;
 using LLM.Editor;
+using LLM.Runtime;
 using LLM.Runtime.Agent;
 using LLM.Runtime.Storage;
 using NUnit.Framework;
@@ -23,17 +25,31 @@ namespace LLM.Tests.Editor.Agent
         private string sessionId;
         private AgentProfile_SO profile;
 
+        // ReadFacts 走 GlobalConfig 配的类名，不点名 Prefs，所以用例得自己把实现装配上；
+        // 用的是共享的 Resources 资产，复原放 TearDown，异常中断也不能留脏值（ADR-030）
+        private LLMGlobalConfig_SO config;
+        private string savedFactsStoreType;
+
         [SetUp]
         public void SetUp()
         {
             sessionId = ZString.Concat("t-", System.Guid.NewGuid().ToString("N"));
             profile = ScriptableObject.CreateInstance<AgentProfile_SO>();
             profile.ProfileKey = "merchant";
+
+            config = Resources.Load<LLMGlobalConfig_SO>(LLMRuntimeSettings.CONFIG_PATH);
+            Assert.That(config is not null,
+                "缺 Resources/LLM/LLMGlobalConfig 资产：进一次编辑器让它自动补，或手工 Create → LLM → Global Config");
+
+            savedFactsStoreType = config.AgentFactsStoreType;
+            config.AgentFactsStoreType = typeof(PrefsAgentStateStore).FullName;
         }
 
         [TearDown]
         public void TearDown()
         {
+            if (config is not null) config.AgentFactsStoreType = savedFactsStoreType;
+
             PrefsHelper.DeleteKey<AgentFactsBlob>(sessionId);
             if (profile is not null) Object.DestroyImmediate(profile);
         }

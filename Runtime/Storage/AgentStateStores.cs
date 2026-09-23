@@ -1,8 +1,9 @@
 /*
 ┌────────────────────────────┐
 │　Description: 内核取状态存储的唯一入口
-│　Remark: 默认 Null，由 LLMRuntimeSettings
-│　　　　　 .Install() 换上真实实现
+│　Remark: 每槽一个私有哨兵，守卫只认实例不认类型；
+│　　　　　 setter 保持 public（宿主自装是规格的一部分），
+│　　　　　 按槽判定取代原先只看 Facts 的 IsDefault（ADR-030）
 │　ClassName: AgentStateStores
 └────────────────────────────┘
 */
@@ -15,20 +16,24 @@ namespace LLM.Runtime.Storage
     /// </summary>
     public static class AgentStateStores
     {
-        private static readonly NullAgentStateStore nullStore = new();
+        private static readonly NullAgentStateStore factsNull = new();
+        private static readonly NullAgentStateStore historyNull = new();
 
-        public static IFactStore Facts = nullStore;
+        public static IFactStore Facts { get; set; } = factsNull;
 
-        public static IConversationStore History = nullStore;
+        public static IConversationStore History { get; set; } = historyNull;
 
-        /// <summary>装配守卫用：已被换过（宿主或测试自装）就不再覆盖，与 Provider 侧"已注册即跳过"同口径</summary>
-        public static bool IsDefault => ReferenceEquals(Facts, nullStore);
+        /// <summary>装配守卫用：仍是本槽哨兵才允许装配根写入，与 Provider 侧"已注册即跳过"同口径</summary>
+        public static bool IsFactsDefault => ReferenceEquals(Facts, factsNull);
+
+        public static bool IsHistoryDefault => ReferenceEquals(History, historyNull);
 
         /// <summary>测试 seam，与 AgentActionRegistry.Reset() 同一套路</summary>
         public static void Reset()
         {
-            Facts = nullStore;
-            History = nullStore;
+            Facts = factsNull;
+            History = historyNull;
+            LLMRuntimeSettings.ResetInstallDiagnostics();
         }
     }
 }

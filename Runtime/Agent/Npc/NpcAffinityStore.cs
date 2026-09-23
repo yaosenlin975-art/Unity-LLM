@@ -9,7 +9,6 @@
 
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Lin.Runtime.Helper;
 using Newtonsoft.Json;
 
 namespace LLM.Runtime.Agent.Npc
@@ -26,11 +25,15 @@ namespace LLM.Runtime.Agent.Npc
     {
         private static readonly NullNpcAffinityStore nullStore = new();
 
-        public static INpcAffinityStore Current = nullStore;
+        public static INpcAffinityStore Current { get; set; } = nullStore;
+
+        /// <summary>装配守卫用：仍是本槽哨兵才允许装配根写入</summary>
+        public static bool IsDefault => ReferenceEquals(Current, nullStore);
 
         public static void Reset()
         {
             Current = nullStore;
+            LLMRuntimeSettings.ResetInstallDiagnostics();
         }
     }
 
@@ -42,31 +45,6 @@ namespace LLM.Runtime.Agent.Npc
         {
             return UniTask.CompletedTask;
         }
-    }
-
-    /// <summary>本地实现复用 PrefsHelper（独立包 com.lin.runtime-prefs-helper）；载荷类型独立，避免与事实槽互相覆盖。</summary>
-    public sealed class PrefsNpcAffinityStore : INpcAffinityStore
-    {
-        public string Load(string sessionId)
-        {
-            if (string.IsNullOrEmpty(sessionId)) return null;
-
-            return PrefsHelper.Get<NpcAffinityBlob>(sessionId)?.Json;
-        }
-
-        public UniTask SaveAsync(string sessionId, string json, CancellationToken ct)
-        {
-            if (!string.IsNullOrEmpty(sessionId))
-                PrefsHelper.Set(sessionId, new NpcAffinityBlob { Json = json });
-
-            return UniTask.CompletedTask;
-        }
-    }
-
-    [System.Serializable]
-    public sealed class NpcAffinityBlob
-    {
-        public string Json;
     }
 
     public sealed class NpcAffinityState

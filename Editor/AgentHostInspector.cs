@@ -131,7 +131,7 @@ namespace LLM.Editor
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("持久化记忆", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "读取 Prefs 中该 Agent 存档键下的事实槽（与运行期 PrefsAgentStateStore 同一路径）。\n只对编辑器 Play 模式写入的存档有效；独立构建写入 persistentDataPath 的数据不在此列。",
+                "按 LLMGlobalConfig 配置的存储实现读取该 Agent 存档键下的事实槽（与运行期同一条读取路径）。\n只对编辑器 Play 模式写入的存档有效；独立构建写入 persistentDataPath 的数据不在此列。",
                 MessageType.None);
 
             if (GUILayout.Button("刷新"))
@@ -169,9 +169,16 @@ namespace LLM.Editor
             memoryHint = null;
             memoryFacts = new List<AgentFact>();
 
-            if (!AgentStateReader.IsPrefsStoreEnabled())
+            var storeState = AgentStateReader.GetFactsStoreState(out string configuredStoreType);
+            if (storeState == EStorePreviewState.Off)
             {
-                memoryHint = "未启用持久化（LLMGlobalConfig 的 StateStore = None），无记忆可显示。";
+                memoryHint = "未配置 Facts Store（LLMGlobalConfig 的 AgentFactsStoreType 为空），无记忆可显示。";
+                return;
+            }
+
+            if (storeState == EStorePreviewState.Missing)
+            {
+                memoryHint = ZString.Format("已配置但类型丢失：{0}——类名失效或所在程序集尚未加载。", configuredStoreType);
                 return;
             }
 

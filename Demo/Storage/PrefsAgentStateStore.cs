@@ -1,40 +1,24 @@
 /*
 ┌────────────────────────────┐
-│　Description: 本地持久化：复用 PrefsHelper 归档
-│　Remark: 两个载荷类型 = 两份归档，事实与
-│　　　　　 轮次两条写路径互不覆盖（ADR-014）
+│　Description: 本地持久化参考实现：复用 PrefsHelper 归档
+│　Remark: 载荷类型 AgentFactsBlob / AgentRoundsBlob 是接口签名的一部分，
+│　　　　　 留在内核契约里；本类只负责交给 PrefsHelper（ADR-030）
 │　ClassName: PrefsAgentStateStore
 └────────────────────────────┘
 */
 
-using System;
-using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Lin.Runtime.Helper;
-using LLM.Runtime;
-using LLM.Runtime.Agent;
+using LLM.Runtime.Storage;
 
-namespace LLM.Runtime.Storage
+namespace LLM.Demo.Storage
 {
-    /// <summary>事实槽载荷。独立类型即独立归档，路径由 PrefsHelper 按类型名定死。</summary>
-    [Serializable]
-    public class AgentFactsBlob
-    {
-        public List<AgentFact> Facts;
-    }
-
-    /// <summary>会话轮次载荷。</summary>
-    [Serializable]
-    public class AgentRoundsBlob
-    {
-        public List<ConversationRound> Rounds;
-    }
-
     /// <summary>
     /// 路径、编码、锁、WebGL 分支全交给 PrefsHelper，本模块不写文件 IO。
     /// Set 在返回前已同步落盘，所以调用方 .Forget() 不存在"退出时写没落地"的窗口。
     /// </summary>
+    [UnityEngine.Scripting.Preserve]
     public sealed class PrefsAgentStateStore : IFactStore, IConversationStore
     {
         // ponytail: PrefsHelper.Set 每次整档重写（含全部 agent 的数据），一轮最多 1 次历史写 + N 次事实写。

@@ -8,6 +8,8 @@
 └────────────────────────────┘
 */
 
+using System;
+using System.Collections.Generic;
 using Cysharp.Text;
 using LLM.Runtime.Agent.Npc;
 using LLM.Runtime.Storage;
@@ -22,6 +24,9 @@ namespace LLM.Runtime
     public static class LLMRuntimeSettings
     {
         public const string CONFIG_PATH = "LLM/LLMGlobalConfig";
+
+        // 跨 Activate 的失败去重记录：Install 每个宿主激活都跑，同一条错只报一次
+        private static readonly HashSet<(string, string)> reported = new();
 
         public static void Install()
         {
@@ -48,7 +53,8 @@ namespace LLM.Runtime
             => UnityEditor.EditorApplication.delayCall += () => CreateConfigAsset();
 
         /// <summary>
-        /// 编辑器里缺配置就补一个空资产：路径与命名先钉死、两项存储留 None，下一步只差拖 ProviderConfig。
+        /// 编辑器里缺配置就补一个空资产：路径与命名先钉死，下一步只差拖 ProviderConfig。
+        /// 三个存储字段留空 = 不落盘，与手工新建的资产同一出厂值。
         /// 构建体里造不出资产，仍走上面的报错。
         /// </summary>
         private static LLMGlobalConfig_SO CreateConfigAsset()
@@ -61,7 +67,7 @@ namespace LLM.Runtime
             if (existing is not null) return existing;
 
             // 同一路径上已经躺着别的资产：不覆盖，退回报错让人自己处理
-            if (UnityEditor.AssetDatabase.LoadAssetAtPath<Object>(assetPath) is not null) return null;
+            if (UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath) is not null) return null;
 
             if (!UnityEditor.AssetDatabase.IsValidFolder("Assets/Resources"))
                 UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
@@ -69,14 +75,11 @@ namespace LLM.Runtime
                 UnityEditor.AssetDatabase.CreateFolder("Assets/Resources", "LLM");
 
             var config = ScriptableObject.CreateInstance<LLMGlobalConfig_SO>();
-            // 空壳资产不默认往 PlayerPrefs 里写数据：要落盘由开发者自己勾 Prefs（手工建的资产仍按类默认值）
-            config.AgentStateStore = EAgentStateStoreKind.None;
-            config.NpcAffinity = EAgentStateStoreKind.None;
             UnityEditor.AssetDatabase.CreateAsset(config, assetPath);
             UnityEditor.AssetDatabase.SaveAssets();
 
             Log.Warning(nameof(LLMRuntimeSettings), ZString.Format(
-                "Resources 下缺 {0}.asset，已在 {1} 自动建好：把 ProviderConfig 拖进去再重进 Play；需要记忆与好感度落盘时把 AgentStateStore / NpcAffinity 勾成 Prefs",
+                "Resources 下缺 {0}.asset，已在 {1} 自动建好：把 ProviderConfig 拖进去再重进 Play；需要记忆与好感度落盘时，在同一份资产的三个存储字段里选实现（空 = 不落盘）",
                 CONFIG_PATH, assetPath));
 
             return config;
@@ -99,18 +102,61 @@ namespace LLM.Runtime
 
         private static void InstallStateStore(LLMGlobalConfig_SO config)
         {
-            // Install() 被每个 AgentHost.Activate 调一次：已经装好（或宿主/测试自装过）就别再覆盖
-            if (!AgentStateStores.IsDefault) return;
+            var created = new Dictionary<Type, object>();   // 本次装配内同类型共用实例（事实与轮次共档）
+            var pending = new List<string>();
 
-            if (config.AgentStateStore != EAgentStateStoreKind.None)
+            InstallSlot<IFactStore>("Facts", config.AgentFactsStoreType,
+                () => AgentStateStores.IsFactsDefault, s => AgentStateStores.Facts = s, created, pending);
+            InstallSlot<IConversationStore>("History", config.AgentHistoryStoreType,
+                () => AgentStateStores.IsHistoryDefault, s => AgentStateStores.History = s, created, pending);
+            InstallSlot<INpcAffinityStore>("Affinity", config.NpcAffinityStoreType,
+                () => NpcAffinityStore.IsDefault, s => NpcAffinityStore.Current = s, created, pending);
+
+            // 三槽攒成一条：Install 每次 AgentHost.Activate 都跑，一槽一条会被淹
+            if (pending.Count > 0)
+                Log.Error(nameof(LLMRuntimeSettings), string.Join("; ", pending));
+        }
+
+        private static void InstallSlot<T>(string slot, string name, Func<bool> isDefault, Action<T> assign,
+            Dictionary<Type, object> created, List<string> pending) where T : class
+        {
+            if (!isDefault()) return;                                    // 宿主/测试已自装
+            if (string.IsNullOrWhiteSpace(name)) return;                 // 未配置：静默，不是错误
+
+            var type = StoreTypeResolver.Resolve(name, typeof(T), out string error);
+            if (type is null)
             {
-                var store = new PrefsAgentStateStore();
-                AgentStateStores.Facts = store;
-                AgentStateStores.History = store;
+                Report(pending, slot, name, error);
+                return;
             }
 
-            if (config.NpcAffinity != EAgentStateStoreKind.None)
-                NpcAffinityStore.Current = new PrefsNpcAffinityStore();
+            if (created.TryGetValue(type, out var reused) && reused is T hit)
+            {
+                assign(hit);
+                return;
+            }
+
+            // 实例化一律走 Create<T>：ctor 异常的兜底只在那里
+            var instance = StoreTypeResolver.Create<T>(name, out error);
+            if (instance is null)
+            {
+                Report(pending, slot, name, error);
+                return;
+            }
+
+            created[type] = instance;
+            assign(instance);
         }
+
+        private static void Report(List<string> pending, string slot, string name, string error)
+        {
+            // 同一 (槽, 类名) 只报一次：失败的槽仍留哨兵，下次 Activate 会再走到这里
+            if (!reported.Add((slot, name))) return;
+
+            pending.Add(ZString.Format("{0}={1} → {2}", slot, name, error ?? "未知原因"));
+        }
+
+        /// <summary>测试 seam：清掉失败去重记录，让"两次 Activate 只报一条"这类断言可重复验。</summary>
+        internal static void ResetInstallDiagnostics() => reported.Clear();
     }
 }

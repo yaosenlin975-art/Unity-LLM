@@ -8,7 +8,8 @@
         "GUID:a775af71b4e6465580d3327d658c61f7",
         "GUID:f51ebe6a0ceec4240a699833d6309b23",
         "GUID:61e7147f370c30147bb0acd8067cc2e9",
-        "GUID:c481622d818b4b90927521f4d343ec38"
+        "GUID:c481622d818b4b90927521f4d343ec38",
+        "LLM.Demo"
     ],
     "includePlatforms": [
         "Editor"

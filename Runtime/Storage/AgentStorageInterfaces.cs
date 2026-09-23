@@ -7,11 +7,28 @@
 └────────────────────────────┘
 */
 
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using LLM.Runtime.Agent;
 
 namespace LLM.Runtime.Storage
 {
+    /// <summary>事实槽载荷。独立类型即独立归档，路径由存储实现按类型名定死。</summary>
+    [Serializable]
+    public class AgentFactsBlob
+    {
+        public List<AgentFact> Facts;
+    }
+
+    /// <summary>会话轮次载荷。</summary>
+    [Serializable]
+    public class AgentRoundsBlob
+    {
+        public List<ConversationRound> Rounds;
+    }
+
     /// <summary>事实槽读写口。</summary>
     public interface IFactStore
     {

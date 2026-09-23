@@ -82,7 +82,7 @@ namespace LLM.Editor
         }
 
         /// <summary>测试程序集也会引用 LLM.Runtime，跳过以免脚手架动作混进正式候选列表</summary>
-        private static bool IsTestAssembly(Assembly asm)
+        internal static bool IsTestAssembly(Assembly asm)
         {
             var name = asm.GetName().Name;
             return name != null && name.IndexOf("Tests", StringComparison.Ordinal) >= 0;
@@ -93,7 +93,7 @@ namespace LLM.Editor
         /// 不能用「引用了 UnityEditor」判定：编辑器里构建的运行时程序集同样引用 UnityEditor.CoreModule，
         /// 那样会把 LLM.Runtime 自己误杀成编辑器侧。
         /// </summary>
-        private static bool IsEditorAssembly(Assembly asm)
+        internal static bool IsEditorAssembly(Assembly asm)
         {
             var name = asm.GetName().Name;
             if (name == null) return false;

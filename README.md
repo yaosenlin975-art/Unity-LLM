@@ -12,7 +12,8 @@
 
 | 程序集 | 目录 | 引用 |
 | --- | --- | --- |
-| `LLM.Runtime` | `Runtime/` | `UniTask`、`Lin.Runtime.Prefs`（仅状态落盘用） |
+| `LLM.Runtime` | `Runtime/` | `UniTask` |
+| `LLM.Demo` | `Demo/` | `LLM.Runtime`、`UniTask`、`Lin.Runtime.Prefs` |
 | `LLM.Editor` | `Editor/` | `LLM.Runtime`、`UniTask` |
 | `LLM.Tests` / `LLM.Tests.Editor` | `Tests/` | 被测程序集 |
 
@@ -20,10 +21,10 @@
 | --- | --- | --- |
 | [UniTask](https://github.com/Cysharp/UniTask) | 全部异步与流式回调 | UPM 加 git URL：`https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask` |
 | [ZString](https://github.com/Cysharp/ZString#unity) | `Cysharp.Text` 零分配拼接，插件内的字符串拼装约定 | NuGet 包 `ZString` |
-| [Unity-PlayerPrefsHelper](https://github.com/yaosenlin975-art/Unity-PlayerPrefsHelper) | 状态落盘：`PrefsAgentStateStore` / `PrefsNpcAffinityStore` 走的 `Lin.Runtime.Prefs` 命名空间 | 包名 `com.lin.runtime-prefs-helper`，内嵌或本地 UPM 安装；它自己声明依赖 `com.unity.nuget.newtonsoft-json` |
+| [Unity-PlayerPrefsHelper](https://github.com/yaosenlin975-art/Unity-PlayerPrefsHelper) | **只有 `Demo/` 里的参考实现用它**（`PrefsAgentStateStore` / `PrefsNpcAffinityStore`） | 包名 `com.lin.runtime-prefs-helper`，内嵌或本地 UPM 安装；它自己声明依赖 `com.unity.nuget.newtonsoft-json` |
 | `com.unity.nuget.newtonsoft-json` | 工具与动作的参数 JSON Schema | UPM 装机，通常由上一行带进来 |
 
-⚠ 这四个都是**编译期**必需：`LLM.Runtime.asmdef` 写死了 `Lin.Runtime.Prefs` 引用，缺包时整个程序集编不过——哪怕你把 `AgentStateStore` 勾成 `None`（那只是不读写）。
+内核 `LLM.Runtime` 只依赖 UniTask（外加 ZString / Newtonsoft 两个预编译程序集）。`Unity-PlayerPrefsHelper` 是**可选**的：不想要它就删掉 `Demo/` 整个目录，内核照常编译与空跑，只是下拉里没有 Prefs 这一档参考实现。
 
 - **日志**用自带的 `LLM.Runtime.Log`，不依赖任何框架日志。Player 构建里日志调用点（连同参数求值）默认被编译消除，需要输出时在 `Scripting Define Symbols` 加 `LLM_LOG`；编辑器构建始终输出。
 - 时钟：`AgentCore` 不是 MonoBehaviour，墙钟由 `AgentHost.Update` 每帧推。
@@ -33,14 +34,15 @@
 ## 三分钟跑通
 
 1. `Assets → Create → LLM → Provider Config`，填 `Model` / `BaseUrl`。`apiKey` 留空则读环境变量 `LLM_API_KEY`。
-2. `Assets → Create → LLM → Global Config`，存成 `Assets/Resources/LLM/LLMGlobalConfig.asset`，把上一步的资产拖进 `ProviderConfig`，勾好 `AgentStateStore` / `NpcAffinity`。这一步可以省：编辑器一加载（或每次域重载）发现该路径缺资产就补一个，并提示你去补 `ProviderConfig`。自动补的那份把 `AgentStateStore` / `NpcAffinity` 都设成 `None`——空壳资产不默认往 PlayerPrefs 写数据，要落盘自己勾成 `Prefs`。构建体里造不出资产，仍按报错处理。
-3. 宿主侧装配一次：
+2. `Assets → Create → LLM → Global Config`，存成 `Assets/Resources/LLM/LLMGlobalConfig.asset`，把上一步的资产拖进 `ProviderConfig`。这一步可以省：编辑器一加载（或每次域重载）发现该路径缺资产就补一个，并提示你去补 `ProviderConfig`。构建体里造不出资产，仍按报错处理。
+3. 要落盘就在同一份资产的「状态存储」三栏里选实现（下拉自动列出可选类），**留空即不落盘**——自动补的资产和手工新建的资产出厂都是空。见下面的[状态存储](#状态存储怎么选实现)。
+4. 宿主侧装配一次：
 
 ```csharp
 LLMRuntimeSettings.Install();   // 注册 Provider + 装状态存储；AgentHost.Activate 与沙盒窗口已经调了
 ```
 
-4. 建会话提问：
+5. 建会话提问：
 
 ```csharp
 using Cysharp.Threading.Tasks;
@@ -64,7 +66,7 @@ private void OnChunk(LLMStreamChunk chunk)
 }
 ```
 
-5. 完全不想写代码：菜单 `Lin/LLM/Agent 沙盒`，选人设资产即可对话、看每轮的注入与工具往返。
+6. 完全不想写代码：菜单 `Lin/LLM/Agent 沙盒`，选人设资产即可对话、看每轮的注入与工具往返。
 
 ---
 
@@ -229,9 +231,50 @@ host.Notify("【事件】玩家离开了店铺");                           // �
 
 4. 每轮注入的世界状态由 `host.SetCoreSnapshot(...)` 供给：`AgentHost` 自己实现了 `IWorldContextProvider`，回给内核的是 `coreSnapshot` 叠上好感度那行；只有不用 `AgentHost` 时才轮到你实现这个接口。只放低频值（身份、目标、关系等级），每轮都变的东西走查询工具。`QueryableHint` 是人设上唯一的引导位，非空时固定注入一行"你可以查询：……"。
 5. 不用 `AgentHost` 也能跑：`new AgentCore(profile, instanceId, ctx, output, runner, toolGate, toolSet)`，自己每帧调 `core.Tick()` 推墙钟，销毁时 `Dispose()`。
-6. `AgentHost` 的 Inspector 带只读「持久化记忆」区：`AgentStateStore = Prefs` 且有稳定 `instanceId` 时按 `{ProfileKey}#{instanceId}` 列回事实槽，只读，不含对话历史。
+6. `AgentHost` 的 Inspector 带只读「持久化记忆」区：`AgentFactsStoreType` 配了且实现装得出来、又有稳定 `instanceId` 时，按 `{ProfileKey}#{instanceId}` 列回事实槽；没配与"配了但类型丢了"是两条不同提示。只读，不含对话历史。
 
 ---
+
+## 状态存储怎么选实现
+
+`LLMGlobalConfig_SO` 上三个字段各管一件事，值是实现的 `Type.FullName`，装配时反射实例化——**新增实现不改框架**：
+
+| 字段 | 接口 | 落什么 |
+| --- | --- | --- |
+| `AgentFactsStoreType` | `IFactStore` | 事实槽（`write_fact` 成功当场写） |
+| `AgentHistoryStoreType` | `IConversationStore` | 会话轮次（轮末写） |
+| `NpcAffinityStoreType` | `INpcAffinityStore` | NPC 好感度 |
+
+留空 = 不落盘（出厂值）。三栏可以各选不同实现，也可以只选一栏。下拉由反射收集：具体类 + public 无参构造 + 实现对应接口 + 非编辑器/测试程序集，并排除内核的 `Null*Store`（"不落盘"只能由空值表达）。`Demo/` 里的 `PrefsAgentStateStore` / `PrefsNpcAffinityStore` 与你自己的实现并列出现，无特权。
+
+```csharp
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using LLM.Runtime.Storage;
+
+public sealed class SaveSystemFactStore : IFactStore
+{
+    // 读是同步签名：内核在 AgentCore 构造期取档，必须赶在第一轮之前
+    public AgentFactsBlob LoadFacts(string sessionId) => GameSave.LoadFacts(sessionId);
+
+    public UniTask SaveFactsAsync(string sessionId, AgentFactsBlob blob, CancellationToken ct)
+    {
+        GameSave.WriteFacts(sessionId, blob);
+        return UniTask.CompletedTask;
+    }
+}
+```
+
+四条边界要认：
+
+1. **实现类所在程序集须在首次 `Install()` 前已加载**。热更 / HybridCLR 程序集里的实现，下拉选得到、装配时解析不到，结果是一条 Error + 不落盘。
+2. **载荷类型就是接口签名里的 `AgentFactsBlob` / `AgentRoundsBlob`**，别换格式——Inspector 的记忆预览按它读。
+3. 若你的实现也走 `PrefsHelper`：**归档身份 = 载荷类型短名的哈希，不含命名空间**。短名撞车就是撞档，所以内核三个 Blob 的短名不许改，自造载荷类型请带工程前缀。
+4. **IL2CPP 裁剪**：没有静态引用点的实现类可能被裁，自己加 `[UnityEngine.Scripting.Preserve]` 或 `link.xml`，内核不替你锚定。
+
+装配守卫按槽判定：宿主或测试已经自装过的槽（`AgentStateStores.Facts = ...`）不被 `Install()` 覆盖，其余槽照常装。三槽失败攒成一条 `Log.Error`，同一 `(槽, 类名)` 只报一次——`Install()` 每次 `AgentHost.Activate` 都会跑。
+
+改这三栏要在 Play 模式之外改，或改完 `Ctrl+S` 存资产（只 `SetDirty` 不落盘，停 Play 会回滚）；关掉 Enter Play Mode Options（不重载域）的工程里，静态装配跨 Play 粘滞，换配置后要重进一次域重载。
 
 ## 内置清单
 

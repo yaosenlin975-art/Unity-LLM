@@ -1,7 +1,9 @@
 {
-    "name": "LLM.Runtime",
-    "rootNamespace": "LLM.Runtime",
+    "name": "LLM.Demo",
+    "rootNamespace": "LLM.Demo",
     "references": [
+        "LLM.Runtime",
+        "Lin.Runtime.Prefs",
         "UniTask"
     ],
     "includePlatforms": [],

@@ -12,7 +12,8 @@ Wraps any OpenAI-compatible endpoint (`/chat/completions`) into a Unity-side **c
 
 | Assembly | Folder | References |
 | --- | --- | --- |
-| `LLM.Runtime` | `Runtime/` | `UniTask`, `Lin.Runtime.Prefs` (state persistence only) |
+| `LLM.Runtime` | `Runtime/` | `UniTask` |
+| `LLM.Demo` | `Demo/` | `LLM.Runtime`, `UniTask`, `Lin.Runtime.Prefs` |
 | `LLM.Editor` | `Editor/` | `LLM.Runtime`, `UniTask` |
 | `LLM.Tests` / `LLM.Tests.Editor` | `Tests/` | assemblies under test |
 
@@ -20,10 +21,10 @@ Wraps any OpenAI-compatible endpoint (`/chat/completions`) into a Unity-side **c
 | --- | --- | --- |
 | [UniTask](https://github.com/Cysharp/UniTask) | every async and streaming callback | UPM git URL: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask` |
 | [ZString](https://github.com/Cysharp/ZString#unity) | `Cysharp.Text` allocation-free building, the plugin's string-concat convention | NuGet package `ZString` (this project uses 2.6.0, under `Assets/Packages/ZString.2.6.0`) |
-| [Unity-PlayerPrefsHelper](https://github.com/yaosenlin975-art/Unity-PlayerPrefsHelper) | persistence: the `Lin.Runtime.Prefs` namespace used by `PrefsAgentStateStore` / `PrefsNpcAffinityStore` | package `com.lin.runtime-prefs-helper`, embedded or local UPM; it declares `com.unity.nuget.newtonsoft-json` itself |
+| [Unity-PlayerPrefsHelper](https://github.com/yaosenlin975-art/Unity-PlayerPrefsHelper) | **used only by the reference implementations under `Demo/`** (`PrefsAgentStateStore` / `PrefsNpcAffinityStore`) | package `com.lin.runtime-prefs-helper`, embedded or local UPM; it declares `com.unity.nuget.newtonsoft-json` itself |
 | `com.unity.nuget.newtonsoft-json` | argument JSON schemas for tools and actions | UPM, normally pulled in by the row above |
 
-⚠ All four are **compile-time** requirements: `LLM.Runtime.asmdef` hard-references `Lin.Runtime.Prefs`, so a missing package fails the whole assembly even if you set `AgentStateStore` to `None` (that only stops reads and writes).
+The kernel `LLM.Runtime` depends on UniTask only (plus the ZString / Newtonsoft precompiled assemblies). `Unity-PlayerPrefsHelper` is **optional**: delete the whole `Demo/` folder and the kernel still compiles and runs empty — you just lose the Prefs reference implementation from the dropdown.
 
 - **Logging** uses the bundled `LLM.Runtime.Log` — no framework logger. In Player builds every log call (arguments included) is compiled away; add `LLM_LOG` to `Scripting Define Symbols` to get output back. Editor builds always log.
 - Clock: `AgentCore` is not a MonoBehaviour; wall clock is pumped by `AgentHost.Update` every frame.
@@ -33,14 +34,15 @@ Wraps any OpenAI-compatible endpoint (`/chat/completions`) into a Unity-side **c
 ## Three minutes to a first answer
 
 1. `Assets → Create → LLM → Provider Config`, fill `Model` / `BaseUrl`. Leave `apiKey` empty to read the `LLM_API_KEY` environment variable.
-2. `Assets → Create → LLM → Global Config`, save as `Assets/Resources/LLM/LLMGlobalConfig.asset`, drag the provider asset into `ProviderConfig`, set `AgentStateStore` / `NpcAffinity`. This step is optional: on every editor load (and domain reload) a missing asset is created at that path and you get a prompt to wire `ProviderConfig`. The auto-created asset sets both `AgentStateStore` and `NpcAffinity` to `None` — an empty shell must not start writing into PlayerPrefs on its own, tick `Prefs` when you want persistence. A build cannot create assets, so there it stays a hard error.
-3. Assemble once:
+2. `Assets → Create → LLM → Global Config`, save as `Assets/Resources/LLM/LLMGlobalConfig.asset`, drag the provider asset into `ProviderConfig`. This step is optional: on every editor load (and domain reload) a missing asset is created at that path and you get a prompt to wire `ProviderConfig`. A build cannot create assets, so there it stays a hard error.
+3. To persist anything, pick an implementation in the three "状态存储" fields of the same asset (the dropdown lists what reflection found). **Empty means no persistence** — both the auto-created and the hand-created asset ship empty. See [Choosing a state store](#choosing-a-state-store).
+4. Assemble once:
 
 ```csharp
 LLMRuntimeSettings.Install();   // registers providers + installs state stores; already called by AgentHost.Activate and the sandbox
 ```
 
-4. Ask something:
+5. Ask something:
 
 ```csharp
 using Cysharp.Threading.Tasks;
@@ -64,7 +66,7 @@ private void OnChunk(LLMStreamChunk chunk)
 }
 ```
 
-5. No code at all: menu `Lin/LLM/Agent 沙盒` — pick a profile asset and chat, with per-turn injections and tool round-trips visible.
+6. No code at all: menu `Lin/LLM/Agent 沙盒` — pick a profile asset and chat, with per-turn injections and tool round-trips visible.
 
 ---
 
@@ -229,9 +231,51 @@ host.Notify("The player left the shop");                         // world event,
 
 4. World state injected per turn comes from `host.SetCoreSnapshot(...)`: `AgentHost` implements `IWorldContextProvider` itself and returns `coreSnapshot` plus the affinity line. Only if you skip `AgentHost` do you implement that interface. Keep it low-frequency (identity, goals, relationship level); fast-changing values belong in query tools. `QueryableHint` is the single guidance slot on the profile — when non-empty it injects one "You may query: …" line.
 5. Without `AgentHost`: `new AgentCore(profile, instanceId, ctx, output, runner, toolGate, toolSet)`, call `core.Tick()` yourself each frame and `Dispose()` on teardown.
-6. The `AgentHost` Inspector has a read-only persisted-memory block: with `AgentStateStore = Prefs` and a stable `instanceId` it lists the fact slots stored under `{ProfileKey}#{instanceId}`. Conversation history is not shown and nothing is editable.
+6. The `AgentHost` Inspector has a read-only persisted-memory block: when `AgentFactsStoreType` is configured, resolvable, and there is a stable `instanceId`, it lists the fact slots stored under `{ProfileKey}#{instanceId}`. "Not configured" and "configured but the type is gone" are two different hints. Conversation history is not shown and nothing is editable.
 
 ---
+
+## Choosing a state store
+
+Three fields on `LLMGlobalConfig_SO`, one per concern, holding the implementation's `Type.FullName`; the composition root instantiates them by reflection. **Adding an implementation never touches the framework**:
+
+| Field | Interface | Stores |
+| --- | --- | --- |
+| `AgentFactsStoreType` | `IFactStore` | fact slots (written as soon as `write_fact` succeeds) |
+| `AgentHistoryStoreType` | `IConversationStore` | conversation rounds (written at end of turn) |
+| `NpcAffinityStoreType` | `INpcAffinityStore` | NPC affinity |
+
+Empty = no persistence (the shipped default). The three are independent — pick one, all, or none. The dropdown is built by reflection: concrete class + public parameterless constructor + implements the interface + not an editor/test assembly, and the kernel's own `Null*Store` types are excluded ("no persistence" is expressed only by the empty entry). The `Demo/` Prefs implementations appear next to yours with no privilege.
+
+```csharp
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using LLM.Runtime.Storage;
+
+public sealed class SaveSystemFactStore : IFactStore
+{
+    // Load is synchronous on purpose: the kernel reads the archive during AgentCore construction,
+    // before the first turn.
+    public AgentFactsBlob LoadFacts(string sessionId) => GameSave.LoadFacts(sessionId);
+
+    public UniTask SaveFactsAsync(string sessionId, AgentFactsBlob blob, CancellationToken ct)
+    {
+        GameSave.WriteFacts(sessionId, blob);
+        return UniTask.CompletedTask;
+    }
+}
+```
+
+Four boundaries to accept:
+
+1. **The assembly holding your implementation must be loaded before the first `Install()`**. For a hot-update / HybridCLR assembly the dropdown shows it but the resolver cannot find it — one `Log.Error`, no persistence.
+2. **The payload is `AgentFactsBlob` / `AgentRoundsBlob` as written in the interface**; don't invent another format — the Inspector memory preview reads exactly those.
+3. If your implementation also goes through `PrefsHelper`: **the archive identity is a hash of the payload type's short name, namespace excluded**. Same short name = same archive. The three kernel Blob short names must not change; prefix your own.
+4. **IL2CPP stripping**: an implementation with no static reference can be stripped. Add `[UnityEngine.Scripting.Preserve]` or a `link.xml` yourself; the kernel will not anchor it for you.
+
+Guards are per slot: anything the host or a test already installed (`AgentStateStores.Facts = ...`) survives `Install()`, the remaining slots are still filled. Failures across the three slots collapse into one `Log.Error`, and the same `(slot, type)` is reported once — `Install()` runs on every `AgentHost.Activate`.
+
+Edit the three fields outside Play mode, or save the asset with `Ctrl+S` (SetDirty alone rolls back when Play stops). In projects with Enter Play Mode Options disabled (no domain reload) the static wiring persists across Play, so a config change needs one domain reload.
 
 ## Built-ins
 
