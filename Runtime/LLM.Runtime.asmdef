@@ -1,0 +1,17 @@
+{
+    "name": "LLM.Runtime",
+    "rootNamespace": "LLM.Runtime",
+    "references": [
+        "Lin.Runtime.Prefs",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

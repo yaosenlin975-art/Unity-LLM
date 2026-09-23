@@ -1,0 +1,30 @@
+{
+    "name": "LLM.Tests.Editor",
+    "rootNamespace": "LLM.Tests.Editor",
+    "references": [
+        "GUID:27619889b8ba8c24980f49ee34dbb44a",
+        "GUID:0acc523941302664db1f4e527237feb3",
+        "GUID:b417475fd7a4480790fc7365cde9d051",
+        "GUID:a775af71b4e6465580d3327d658c61f7",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:61e7147f370c30147bb0acd8067cc2e9",
+        "GUID:c481622d818b4b90927521f4d343ec38"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "ZString.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
