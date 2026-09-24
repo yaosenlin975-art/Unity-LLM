@@ -50,8 +50,7 @@ namespace LLM.Editor
             { "SpeechStyle", "说话方式" },
             { "GoalsAndValues", "目标与价值" },
             { "KnowledgeBoundary", "知识边界" },
-            { "InitialAffinity", "初始好感度" },
-            { "PerformanceProfile", "说话表现配置" }
+            { "InitialAffinity", "初始好感度" }
         };
 
         /// <summary>面板右上角的开关：开=中文标签，关=字段原名。存 EditorPrefs，全编辑器共享一次选择</summary>
