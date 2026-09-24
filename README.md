@@ -303,7 +303,7 @@ public sealed class SaveSystemFactStore : IFactStore
 
 ## NPC 表现层（可选）
 
-`NpcAgentProfile_SO`（身份 / 性格 / 说话风格 / 目标与价值观 / 知识边界 / `InitialAffinity`）、`NpcAffinityController`（好感度与关系等级，可被游戏侧 `AdjustFromGame` 直接调）、`NpcGestureCatalog_SO` + `NpcPerformanceProfile_SO` + `NpcSpeechPerformanceController`（本地流式导演：切句、表情、手势，不进模型提示词）。动画与手势的真正后端由玩法层实现 `IAgentAnimationDriver` / `INpcGestureDriver`，本插件不引用任何动画类型。
+`NpcAgentProfile_SO`（身份 / 性格 / 说话风格 / 目标与价值观 / 知识边界 / `InitialAffinity`）、`NpcAffinityController`（好感度与关系等级，可被游戏侧 `AdjustFromGame` 直接调）。动画后端由玩法层实现 `IAgentAnimationDriver`，本插件不引用任何动画类型；模型侧的出口是 `AgentAnimationTools` 的成员工具/动作（`list_animation_states` / `play_animation_state` / `set_animation_parameter`）。"说话时自动比划"的本地流式导演（切句 + 手势目录 + 关键词意图分类）已删除——说什么、配什么动作一律交回模型决定。`Demo/Npc/` 另给了一份宿主侧参考实现：`WorldObservable` + `WorldObservableManager`（可监测物在册表与视野查询）与 `NpcProximityGreeter`（玩家进打招呼范围时上报世界事件，本地不出台词）。
 
 ## 编辑器入口
 
