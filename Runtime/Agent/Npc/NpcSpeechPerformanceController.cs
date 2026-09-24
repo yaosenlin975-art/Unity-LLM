@@ -207,7 +207,10 @@ namespace LLM.Runtime.Agent.Npc
                 return;
 
             float now = Time.unscaledTime;
-            GestureIntent intent = RuleGestureIntentClassifier.Classify(clause, currentEmotion);
+            // 手势意图只按当前情绪选：写死的关键词表已删，要看场合挑动作交给模型
+            GestureIntent intent = currentEmotion == ENpcEmotion.Angry
+                ? new GestureIntent(EGestureIntent.AngryTalk, 0.8f)
+                : new GestureIntent(EGestureIntent.NeutralTalk, 0.4f);
             GestureDefinition gesture = resolver.Resolve(
                 activeProfile.GestureCatalog, intent, currentEmotion, now);
             if (gesture == null) return;
