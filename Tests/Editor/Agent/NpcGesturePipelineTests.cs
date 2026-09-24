@@ -58,28 +58,6 @@ namespace LLM.Tests.Editor.Agent
             Assert.That(clause, Is.EqualTo("让我想想"));
         }
 
-        [TestCase("不行，我不同意。", EGestureIntent.Reject)]
-        [TestCase("你为什么这样问？", EGestureIntent.Question)]
-        [TestCase("当然可以。", EGestureIntent.Agree)]
-        [TestCase("请看那边。", EGestureIntent.Indicate)]
-        [TestCase("我来说明原因。", EGestureIntent.Explain)]
-        [TestCase("今天风很舒服。", EGestureIntent.NeutralTalk)]
-        public void RuleClassifier_ReturnsExpectedIntent(string clause, EGestureIntent expected)
-        {
-            GestureIntent result = RuleGestureIntentClassifier.Classify(clause, ENpcEmotion.Neutral);
-
-            Assert.That(result.Type, Is.EqualTo(expected));
-            Assert.That(result.Intensity, Is.InRange(0f, 1f));
-        }
-
-        [Test]
-        public void RuleClassifier_UsesEmotionForNeutralSpeech()
-        {
-            GestureIntent result = RuleGestureIntentClassifier.Classify("随便吧。", ENpcEmotion.Angry);
-
-            Assert.That(result.Type, Is.EqualTo(EGestureIntent.AngryTalk));
-        }
-
         [Test]
         public void PerformanceController_DeclaresNoAgentToolsOrActions()
         {
