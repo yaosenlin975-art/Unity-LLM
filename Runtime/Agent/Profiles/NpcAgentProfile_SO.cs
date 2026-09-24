@@ -32,10 +32,6 @@ namespace LLM.Runtime.Agent
         [Header("玩家关系")]
         [Range(-100, 100)] public int InitialAffinity;
 
-        [Header("肢体表现")]
-        [Tooltip("仅供本地流式动作导演使用，不会拼入模型提示词")]
-        public NpcPerformanceProfile_SO PerformanceProfile;
-
         public override string BuildSystemPrompt()
         {
             using var sb = ZString.CreateStringBuilder();
