@@ -302,7 +302,7 @@ Edit the three fields outside Play mode, or save the asset with `Ctrl+S` (SetDir
 
 ## NPC presentation layer (optional)
 
-`NpcAgentProfile_SO` (identity / personality / speech style / goals & values / knowledge boundary / `InitialAffinity`), `NpcAffinityController` (affinity and relationship level, also callable from gameplay via `AdjustFromGame`), and `NpcGestureCatalog_SO` + `NpcPerformanceProfile_SO` + `NpcSpeechPerformanceController` (local streaming direction: clause splitting, expression, gesture — never sent into the prompt). Animation and gesture backends implement `IAgentAnimationDriver` / `INpcGestureDriver` in the gameplay layer; this plugin references no animation type.
+`NpcAgentProfile_SO` (identity / personality / speech style / goals & values / knowledge boundary / `InitialAffinity`) and `NpcAffinityController` (affinity and relationship level, also callable from gameplay via `AdjustFromGame`). Animation backends implement `IAgentAnimationDriver` in the gameplay layer; this plugin references no animation type. What the model can play is exposed through the member tools/actions in `AgentAnimationTools` (`list_animation_states` / `play_animation_state` / `set_animation_parameter`). The local "gesture while speaking" director (clause splitting, gesture catalog, keyword intent classifier) has been removed — what to say and which animation to play is the model's call. `Demo/Npc/` ships a host-side reference implementation: `WorldObservable` + `WorldObservableManager` (registry and line-of-sight query) plus `NpcProximityGreeter`, which reports a world event when the player walks into greeting range and never speaks a scripted line.
 
 ## Editor entry points
 
