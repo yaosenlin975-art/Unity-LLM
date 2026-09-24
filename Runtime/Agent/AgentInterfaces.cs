@@ -77,20 +77,6 @@ namespace LLM.Runtime.Agent
         string SetSpeed(float speed);
     }
 
-    /// <summary>
-    /// NPC 纯表现动作后端。接收本地已经选好的 Clip，不向模型暴露动作目录；
-    /// 与 IAgentAnimationDriver 的状态机工具契约相互独立。
-    /// </summary>
-    public interface INpcGestureDriver
-    {
-        bool IsGesturePlaying { get; }
-
-        bool TryPlayGesture(AnimationClip clip, float blendInSeconds, float blendOutSeconds,
-            float speed, bool upperBodyOnly, bool additive, bool loop, out string error);
-
-        void StopGesture(float blendOutSeconds);
-    }
-
     public enum EAgentOutcome
     {
         Completed,
