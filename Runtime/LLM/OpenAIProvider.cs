@@ -69,7 +69,17 @@ namespace LLM.Runtime
             // 流式不设整体 timeout：本地模型（LM Studio 等）一次生成就可能超过 30s，
             // 设了会被 UnityWebRequest 掐断，60s 的 idle 档反而永远轮不到。失控只由 idle 超时与墙钟管
             using var linkedCts = LinkCancellationToken(ct, sseHandler.IdleToken);
-            await webRequest.SendWebRequest().WithCancellation(linkedCts.Token);
+            try
+            {
+                await webRequest.SendWebRequest().WithCancellation(linkedCts.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested && sseHandler.IdleToken.IsCancellationRequested)
+            {
+                // 空闲到期不能以 OCE 形态往外抛：调用链上 OCE 一律当"玩家取消"处理，
+                // 既不记请求日志也不进降级，挂死的网关就变成一整轮无声空回复
+                throw new Exception(ZString.Format("流式响应空闲超过 {0}s 未收到数据", sseHandler.IdleTimeoutSeconds));
+            }
+
             ThrowOnError(webRequest, body);
         }
 
@@ -223,12 +233,43 @@ namespace LLM.Runtime
             return JObject.Parse(parameters);
         }
 
+        private static JObject ParseJsonObject(string responseBody)
+        {
+            if (string.IsNullOrWhiteSpace(responseBody))
+                throw new Exception("响应体为空");
+
+            try
+            {
+                return JObject.Parse(responseBody);
+            }
+            catch (JsonReaderException ex)
+            {
+                // 网关忽略 stream/返回 HTML 时，裸 JsonReaderException 既看不出是哪个响应也进不了日志
+                throw new Exception(ZString.Format("响应不是 JSON 对象({0}): {1}", ex.Message, Preview(responseBody)), ex);
+            }
+        }
+
+        private static string Preview(string text)
+        {
+            return string.IsNullOrEmpty(text)
+                ? ""
+                : text.Substring(0, Math.Min(text.Length, k_errorBodyPreview));
+        }
+
         private LLMResponse ParseResponse(string responseBody)
         {
-            var json = JObject.Parse(responseBody);
+            var json = ParseJsonObject(responseBody);
+
+            // 200 但结构不对（网关忽略 stream 回 HTML、被内容策略切空、error-only 响应）一律抛出：
+            // 静默返回空 Content 会把一轮"没发生的回答"写进历史，且这类响应没有可回灌的正文
             var choices = json["choices"] as JArray;
-            var choice = choices != null && choices.Count > 0 ? choices[0] : null;
+            if (choices == null || choices.Count == 0)
+                throw new Exception(ZString.Format("响应里没有 choices: {0}", Preview(responseBody)));
+
+            var choice = choices[0];
             var message = Child(choice, "message");
+            if (message == null)
+                throw new Exception(ZString.Format("choices[0] 缺 message: {0}", Preview(responseBody)));
 
             var response = new LLMResponse
             {
@@ -437,6 +478,8 @@ namespace LLM.Runtime
                     return cts != null ? cts.Token : default;
                 }
             }
+
+            public int IdleTimeoutSeconds => _idleTimeoutSeconds;
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {

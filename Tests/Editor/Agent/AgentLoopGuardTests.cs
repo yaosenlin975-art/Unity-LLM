@@ -308,10 +308,26 @@ namespace LLM.Tests.Editor.Agent
             Assert.AreEqual(1, AgentResourceLocks.WaitingCount("shop:4"));
 
             fakeNow += 6f;
-            AgentResourceLocks.PumpKey("shop:4");
+            AgentResourceLocks.PumpAll();
 
             Assert.AreEqual(0, AgentResourceLocks.WaitingCount("shop:4"), "推进内核时钟即可到期，不用真等");
             held.Dispose();
+        }
+
+        [Test]
+        public void Locks_ReleaseWithoutQueueFreesTheKey()
+        {
+            // 无竞争取锁不会建队列；释放若以"队列存在"为前提就直接返回，该 key 会被幽灵持有者永久占住，
+            // 之后所有人都只能等到超时。上面几条用例都在 SetUp 里 Reset()，掩盖不出这条路径
+            var first = AgentResourceLocks.TryAcquireAsync("shop:5", 5, "npc#a", 1, CancellationToken.None)
+                .GetAwaiter().GetResult();
+            first.Dispose();
+
+            var second = AgentResourceLocks.TryAcquireAsync("shop:5", 0, "npc#b", 1, CancellationToken.None)
+                .GetAwaiter().GetResult();
+
+            Assert.IsNotNull(second, "释放后同 key 应能再次无竞争取得");
+            second.Dispose();
         }
     }
 }

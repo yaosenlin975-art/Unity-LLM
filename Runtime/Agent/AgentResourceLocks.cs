@@ -69,6 +69,8 @@ namespace LLM.Runtime.Agent
 
         /// <summary>同 key 一条 FIFO。用 List 而不是 Queue：等待者被取消时要能从中段摘除</summary>
         private static readonly Dictionary<string, List<LockLease>> queues = new();
+        private static readonly List<string> pumpKeys = new();
+        private static bool pumping;
         private static int nextSerial;
 
         internal static int NextSerial() => ++nextSerial;
@@ -134,18 +136,19 @@ namespace LLM.Runtime.Agent
             lease.CancelRegistration.Dispose();
 
             if (lease.Key == null) return;
-            if (!queues.TryGetValue(lease.Key, out var queue)) return;
 
             if (holders.TryGetValue(lease.Key, out var holder) && ReferenceEquals(holder, lease))
             {
                 holders.Remove(lease.Key);
-                HandOffNext(lease.Key, queue);
+                // 无竞争取过的锁不会建队列，这里不能反过来拿队列当释放前提，否则该 key 永久被幽灵持有者占住
+                if (queues.TryGetValue(lease.Key, out var queue))
+                    HandOffNext(lease.Key, queue);
                 return;
             }
 
             // 没拿到过锁的等待者被取消时已自行出队，这里只兜住漏网的
-            if (queue.Contains(lease))
-                queue.Remove(lease);
+            if (queues.TryGetValue(lease.Key, out var waiting) && waiting.Contains(lease))
+                waiting.Remove(lease);
         }
 
         internal static void CancelWaiting(LockLease lease)
@@ -162,6 +165,33 @@ namespace LLM.Runtime.Agent
         public static void PumpKey(string key)
         {
             ExpireWaiters(key);
+        }
+
+        /// <summary>
+        /// 泵全部在排队的 key。内核不用真实计时器，等锁的人只能靠时钟泵发现自己的 Deadline 过了；
+        /// AgentCore.Tick 若不调这里，排队到期就只在有人再碰同一 key 时才被顺带发现。
+        /// </summary>
+        public static void PumpAll()
+        {
+            // 到期回调会同线程内联跑完等待者的整条后续（回填失败→下一轮→起新轮），
+            // 那条链上再进一次 Tick 就会带着半空的快照重入这里，故一次只允许一层
+            if (queues.Count == 0 || pumping) return;
+
+            pumping = true;
+            pumpKeys.Clear();
+            foreach (var key in queues.Keys)
+                pumpKeys.Add(key);
+
+            try
+            {
+                for (int i = 0; i < pumpKeys.Count; i++)
+                    ExpireWaiters(pumpKeys[i]);
+            }
+            finally
+            {
+                pumping = false;
+                pumpKeys.Clear();
+            }
         }
 
         private static void ExpireWaiters(string key)

@@ -114,8 +114,14 @@ namespace LLM.Runtime.Agent
             if (string.IsNullOrEmpty(ProfileKey))
                 ProfileKey = baseKey + "-" + Guid.NewGuid().ToString("N").Substring(0, 4);
 #else
-            // 构建内没有资产遍历能力，随机派生；实例区分仍由 AgentCore 的 instanceId 兜底
-            ProfileKey = "agent-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            // 构建内没有资产遍历能力，跳过查重，但仍按人设派生：SessionId = ProfileKey#instanceId 就是存储键，
+            // 随机派生等于每次启动换一座空档案，历史/事实槽/好感全部静默丢失
+            var hash = Fnv1a(PersonaPrompt).ToString("x8");
+            var buildKey = ZString.Concat("agent-", hash);
+            for (int suffix = 2; suffix < 100 && knownKeys.Contains(buildKey); suffix++)
+                buildKey = ZString.Concat("agent-", hash, "-", suffix);
+
+            ProfileKey = buildKey;
 #endif
             knownKeys.Add(ProfileKey);
             return true;

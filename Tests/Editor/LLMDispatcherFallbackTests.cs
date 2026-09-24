@@ -166,16 +166,62 @@ namespace LLM.Tests.Editor
             }
         }
 
+        [Test]
+        public async Task EnqueueStreamAsync_DefaultAlreadyEmitted_DoesNotReplayOnFallback()
+        {
+            var dispatcher = LLMDispatcher.GetInstance();
+
+            // 默认 Provider 先吐了一段字再断：那段字已经进了本轮正文与宿主气泡，
+            // 换供应商重放等于把台词说两遍，所以此时必须让失败可见地抛出去
+            var half = new FakeProvider(k_defaultProviderName, shouldFail: true,
+                content: "half ", emitBeforeFail: true);
+            var fallback = new FakeProvider(k_fallbackProviderName, shouldFail: false,
+                content: k_expectedContent);
+
+            dispatcher.RegisterProvider(half);
+            dispatcher.RegisterProvider(fallback);
+            dispatcher.SetDefaultProvider(k_defaultProviderName);
+            dispatcher.SetFallbackProvider(k_fallbackProviderName);
+
+            var receivedChunks = new List<LLMStreamChunk>();
+            Exception thrown = null;
+            try
+            {
+                try
+                {
+                    await dispatcher.EnqueueStreamAsync(new LLMRequest { SessionId = "test_session" },
+                        chunk => receivedChunks.Add(chunk), CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    thrown = ex;
+                }
+
+                Assert.IsNotNull(thrown, "吐过字后失败应把原异常抛出，而不是悄悄换供应商");
+                Assert.AreEqual(1, receivedChunks.Count, "只该收到失败那轮已吐的一段，fallback 不得重放");
+                Assert.AreEqual("half ", receivedChunks[0].ContentDelta);
+            }
+            finally
+            {
+                dispatcher.UnregisterProvider(k_defaultProviderName);
+                dispatcher.UnregisterProvider(k_fallbackProviderName);
+                dispatcher.SetDefaultProvider(null);
+                dispatcher.SetFallbackProvider(null);
+            }
+        }
+
         private sealed class FakeProvider : ILLMProvider
         {
             private readonly bool shouldFail;
+            private readonly bool emitBeforeFail;
             private readonly string content;
 
-            public FakeProvider(string name, bool shouldFail, string content = "")
+            public FakeProvider(string name, bool shouldFail, string content = "", bool emitBeforeFail = false)
             {
                 ProviderName = name;
                 this.shouldFail = shouldFail;
                 this.content = content;
+                this.emitBeforeFail = emitBeforeFail;
             }
 
             public string ProviderName { get; }
@@ -194,7 +240,12 @@ namespace LLM.Tests.Editor
                 Action<LLMStreamChunk> onChunk, CancellationToken ct)
             {
                 if (shouldFail)
+                {
+                    if (emitBeforeFail)
+                        onChunk(new LLMStreamChunk(content, default, false));
                     throw new Exception(k_failMessage);
+                }
+
                 onChunk(new LLMStreamChunk(content, default, true));
                 return default;
             }

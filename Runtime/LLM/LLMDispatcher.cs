@@ -166,6 +166,11 @@ namespace LLM.Runtime
             {
                 collector.Flush(ex.Message);
 
+                // 已经下发过分片就不再降级：那些字已进本轮正文与宿主气泡，收不回来，
+                // 换供应商重放一遍只会让台词重复、tool 参数跨 attempt 串槽。本轮按失败可见地结束
+                if (collector.Forwarded)
+                    throw;
+
                 var fallback = GetProvider(fallbackProvider);
                 if (fallback == null || fallback.ProviderName == provider.ProviderName)
                     throw;
@@ -207,6 +212,8 @@ namespace LLM.Runtime
             private int cacheHitTokens;
             private bool hasToolCall;
             private bool flushed;
+            /// <summary>是否已向消费端下发过分片。下发过就不允许再换供应商重放</summary>
+            public bool Forwarded { get; private set; }
             private readonly HashSet<string> toolNames = new();
 
             public StreamLogCollector(string sessionId, string providerName, Action<LLMStreamChunk> onNext)
@@ -233,7 +240,10 @@ namespace LLM.Runtime
                         toolNames.Add(delta.Name);
                 }
 
-                onNext?.Invoke(chunk);
+                if (onNext == null) return;
+
+                Forwarded = true;
+                onNext(chunk);
             }
 
             public void Flush(string error)

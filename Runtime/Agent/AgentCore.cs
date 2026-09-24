@@ -199,6 +199,7 @@ namespace LLM.Runtime.Agent
             }
 
             executor.PumpActionDeadline(now);
+            AgentResourceLocks.PumpAll();
         }
 
         public void Dispose()
