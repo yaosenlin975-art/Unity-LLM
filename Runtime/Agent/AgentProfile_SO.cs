@@ -70,8 +70,16 @@ namespace LLM.Runtime.Agent
         /// <summary>会话内已见过的 key（含手动填写的），跨实例查重用；域重载清零</summary>
         private static readonly HashSet<string> knownKeys = new();
 
+        /// <summary>
+        /// 拼好的人设缓存：字段一旦在 Inspector 里改完，游戏开始后就不再变，
+        /// 每轮重拼只是白付一次分配，而字节必须逐轮一致才保得住前缀缓存（ADR-006 §3）。
+        /// 放基类是因为 Unity 按名字反射调 OnValidate，派生类再声明同名私有方法会把基类那个挡掉。
+        /// </summary>
+        protected string systemPromptCache;
+
         private void OnValidate()
         {
+            systemPromptCache = null;
 #if UNITY_EDITOR
             EnsureKey();
 #endif
