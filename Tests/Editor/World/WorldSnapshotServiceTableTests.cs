@@ -38,7 +38,7 @@ namespace LLM.Tests.Editor.World
         public void TearDown()
         {
             // 不在这里断言表为空：那等于把结论绑在"DestroyImmediate 一定触发 OnDisable"上。
-            // 成对性由 RegisterDisableEnable_IsPairedAndIdempotent 单独断言
+            // 启用/禁用成对性由 Task 4 的 WorldObservableTests 断言
             for (int i = 0; i < spawned.Count; i++)
             {
                 if (spawned[i] is not Object obj || obj == null) continue;
@@ -50,7 +50,7 @@ namespace LLM.Tests.Editor.World
         }
 
         [Test]
-        public void RegisterDisableEnable_IsPairedAndIdempotent()
+        public void RegisterUnregister_IsIdempotent()
         {
             var go = new GameObject("村长");
             var item = go.AddComponent<FakeObservable>();
