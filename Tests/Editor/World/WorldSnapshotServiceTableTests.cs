@@ -15,17 +15,15 @@ using Object = UnityEngine.Object;
 
 namespace LLM.Tests.Editor.World
 {
-    /// <summary>假可观测物：只提供四个观测面取值，本身不做任何注册（注册由用例显式驱动）</summary>
+    /// <summary>假可观测物：只提供三个观测面取值，本身不做任何注册（注册由用例显式驱动）</summary>
     internal sealed class FakeObservable : MonoBehaviour, IWorldObservable
     {
         public string Label;
         public string State = "";
-        public int Rank;
 
         public string ObservedLabel => Label;
         public Vector3 ObservedPosition => transform.position;
         public string ObservableState => State;
-        public int Order => Rank;
     }
 
     /// <summary>世界侧在册表：只测登记/注销成对性与 revision 语义，不建场景、不碰模型</summary>
