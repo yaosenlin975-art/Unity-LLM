@@ -174,7 +174,7 @@ Warn / Block 的回灌文案都带"即使没有结果，也请直接根据已有
 
 **按实例门控。** `AgentHost` 持一份覆盖式开关表：未收录 = 可用，收录项按其 `Enabled`。声明层（不把关闭的工具放进 `request.Tools`）与执行层（再拒一次）都读它，所以关掉的工具既不可见也不可执行。运行期可改：`host.SetToolEnabled("get_price", false)`，下一轮起生效。
 
-**三个注入点**（`LLMSession`）：`ToolExecutor` 换掉 `tool_call` 的落地方式（异步、拦截、超时都在这里，`AbortTurn` 为真则同批剩余调用不执行不回填）；`ExtraTools` 挂注册表之外的声明（内核动作走这里）；`AskAsync(..., writeHistory: false)` 由调用方决定这轮写不写历史。`EnableTools = false` 时声明与执行一并屏蔽。
+**三个注入点**（`LLMSession`）：`ToolExecutor` 换掉 `tool_call` 的落地方式（异步、拦截、超时都在这里，`AbortTurn` 为真则同批剩余调用不执行不回填）；`ExtraTools` 挂注册表之外的声明（内核动作走这里）；`AskAsync(..., writeHistory: false)` 由调用方决定这轮写不写历史。`EnableTools = false` 时声明与执行一并屏蔽。除 `AddContext` 那类长期块之外，`AskAsync` 每轮还接两段注入内容：`stableContext`（静态段）排在 `ephemeralContext`（动态段）之前，位次与破坏性说明见「世界/个体快照」。
 
 ---
 
@@ -229,7 +229,7 @@ host.Trigger("玩家点了「交谈」");                                // 起�
 host.Notify("【事件】玩家离开了店铺");                           // 世界事件起轮，前缀会被标成事件
 ```
 
-4. 每轮注入的世界状态由 `host.SetCoreSnapshot(...)` 供给：`AgentHost` 自己实现了 `IWorldContextProvider`，回给内核的是 `coreSnapshot` 叠上好感度那行；只有不用 `AgentHost` 时才轮到你实现这个接口。只放低频值（身份、目标、关系等级），每轮都变的东西走查询工具。`QueryableHint` 是人设上唯一的引导位，非空时固定注入一行"你可以查询：……"。
+4. 每轮注入的世界状态：挂 `NpcAgentHost` 的 NPC 由「世界/个体快照」那段自动供给，`host.SetCoreSnapshot(...)` 退居兜底（关掉快照、或内容还没人登记贡献者时才轮到它）。用基类 `AgentHost` 的纯聊天宿主仍然只回 `coreSnapshot` 叠好感度那行——它自己实现了 `IWorldContextProvider`，只有不用宿主时才轮到你实现这个接口。只放低频值（身份、目标、关系等级），每轮都变的东西走查询工具。`QueryableHint` 是人设上唯一的引导位，非空时固定注入一行"你可以查询：……"，它归**静态段**（内容不变，留在稳定前缀里）。
 5. 不用 `AgentHost` 也能跑：`new AgentCore(profile, instanceId, ctx, output, runner, toolGate, toolSet)`，自己每帧调 `core.Tick()` 推墙钟，销毁时 `Dispose()`。
 6. `AgentHost` 的 Inspector 带只读「持久化记忆」区：`AgentFactsStoreType` 配了且实现装得出来、又有稳定 `instanceId` 时，按 `{ProfileKey}#{instanceId}` 列回事实槽；没配与"配了但类型丢了"是两条不同提示。只读，不含对话历史。
 
@@ -301,15 +301,65 @@ public sealed class SaveSystemFactStore : IFactStore
 - 折叠区从新到旧按 `TailTokenBudget` 保尾部，头部"摘要 + 首轮短提问"永久锚定；`MinFoldTokens` 以下不做无效折叠；连续两次压缩后置位暂停自动压缩。
 - 摘要由 LLM 生成，**只试一次**，超时/失败退化为机械折叠。想用小模型跑压缩，在 `CompressionProviderName` 填它的注册名（留空 = 沿用默认 Provider）。原始轮次可选归档到 `persistentDataPath/LLMArchive/<session>/`。
 
+## 世界/个体快照（注入分层）
+
+注入给模型的内容按两根轴切成四类。判据只有一句，写死防止以后"往哪边塞都有争议"：**换一个 NPC 来问，答案变不变？不变 = 世界，变 = 个体。**
+
+|  | 静态（内容约定不变） | 动态（每轮可变） |
+| --- | --- | --- |
+| **世界** | 地图背景故事、场景规则 | 时间、天气、在场者列表 |
+| **个体** | 该角色的可用动画清单、身份能力 | 生命值、当前动作、好感、手填兜底 |
+
+```csharp
+// —— 世界侧：注册进 WorldSnapshotService（static 单例）——
+public interface IWorldLoreContributor { int Order { get; } string RenderLore(); }
+public interface IWorldFactContributor { int Order { get; } string RenderFact(); }
+
+// —— 个体侧：注册进本 NPC 自己的 NpcAgentHost（不进全局表）——
+public interface ISelfProfileContributor { int Order { get; } string RenderProfile(); }
+public interface ISelfStateContributor   { int Order { get; } string RenderState(); }
+
+// —— 身份：NPC 由 NpcAgentHost 自己实现，玩家/道具/群众挂轻量 WorldObservable ——
+public interface IWorldObservable
+{
+    string ObservedLabel { get; }      // 给模型看的名字
+    Vector3 ObservedPosition { get; }  // 观测原点，高个子可覆盖到胸口高度
+    string ObservableState { get; }    // 一句自我状态，无内容返回空串
+}
+```
+
+- **静态段整段缓存**，重算的唯一触发是注册列表变化（`revision`）；**动态段每轮逐个问一遍**，变没变由贡献者自己判（它手里有最便宜的比较：自己记 last-state + last-text）。框架不定义"状态"、不算指纹。
+- system 块序：`人设 → contextBlocks → 世界静态 → 个体静态 ‖ 世界动态 → 个体动态`。稳定前缀到此为止，变化点全部推到末尾，provider 的前缀缓存才可能命中（请求日志的缓存命中列可以直接验）。
+- 在场者属世界动态，但**按请求者现算**：`WorldSnapshotService.RenderFacts(origin, except, radius, maxPeers)` 排掉的正是请求者自己，所以 NPC 不会把自己念进"你身边有谁"；超出名额折叠成"另有 K 个未列出"而不是静默丢掉。
+- 个体侧不进全局表：A 的 `OnEnable` 只该作废 A 自己的静态段。并进全局表等于全场 NPC 互相打作废，稳定前缀再也命中不了。
+- `NpcAgentHost` Inspector 的「世界/个体快照」节有总开关与在场者的半径/名额；关掉总开关后只剩好感度与 `SetCoreSnapshot` 的手填兜底。
+
+**贡献者的配对注销是义务，不是建议。** 静态段只在"注册列表变化"时重算——贡献者被销毁却没 `Unregister` 时，它上一轮渲染的文本会一直留在快照里，直到下一次有人注册或注销。渲染遍历时的判活（`contributor is UnityEngine.Object u && u == null` 则跳过）只保证**不抛异常**，不保证**文本新鲜**，两件事别混。绑在启用态上的注册（`IWorldObservable` 走 `OnEnable/OnDisable`）不用调用方管；但往 `NpcAgentHost` 上登记的个体贡献者，谁登记谁就得自己写那一行注销。
+
+**`LLMSession.AskAsync` 的签名变更是破坏性的**，新参数插在中间而不是末尾：
+
+```csharp
+public async UniTask<string> AskAsync(string userText,
+    Action<LLMStreamChunk> onChunkCallback = null,
+    string stableContext = null,          // 新增：静态段（世界/个体设定）
+    string ephemeralContext = null,       // 原有：动态段（事实槽、世界/个体现状）
+    bool writeHistory = true,
+    CancellationToken ct = default)
+```
+
+包外若有按位置传第三个 `string` 的旧调用（旧语义是 `ephemeralContext`），`string → string` 编译器抓不到——**它会照常编译通过，只是那段每轮都变的文本被放进了静态段**：变化点跟着前移，排在它后面的动态段与本轮之后的所有内容都不再命中前缀缓存（前面的人设与长期块仍然照旧命中，所以现象是"缓存收益莫名少了一半"，而不是全崩）。升级时改成命名实参，或自己核对第 3、4 位。生产侧唯一调用点是 `AgentCore`。
+
+`WorldSnapshotService` / `NpcAgentHost` 的取舍与拒绝理由见工程 `docs/adr/ADR-030-world-vs-self-snapshot-cache.md`（不随包分发）。
+
 ## NPC 表现层（可选）
 
-`NpcAgentProfile_SO`（身份 / 性格 / 说话风格 / 目标与价值观 / 知识边界 / `InitialAffinity`）、`NpcAffinityController`（好感度与关系等级，可被游戏侧 `AdjustFromGame` 直接调）。动画后端由玩法层实现 `IAgentAnimationDriver`，本插件不引用任何动画类型；模型侧的出口是 `AgentAnimationTools` 的成员工具/动作（`list_animation_states` / `play_animation_state` / `set_animation_parameter`）。"说话时自动比划"的本地流式导演（切句 + 手势目录 + 关键词意图分类）已删除——说什么、配什么动作一律交回模型决定。`Demo/Npc/` 另给了一份宿主侧参考实现：`WorldObservable` + `WorldObservableManager`（可监测物在册表与视野查询）与 `NpcProximityGreeter`（玩家进打招呼范围时上报世界事件，本地不出台词）。
+`NpcAgentProfile_SO`（身份 / 性格 / 说话风格 / 目标与价值观 / 知识边界 / `InitialAffinity`）、`NpcAffinityController`（好感度与关系等级，可被游戏侧 `AdjustFromGame` 直接调）。动画后端由玩法层实现 `IAgentAnimationDriver`，本插件不引用任何动画类型；模型侧的出口是 `AgentAnimationTools` 的成员工具/动作（`list_animation_states` / `play_animation_state` / `set_animation_parameter`）。"说话时自动比划"的本地流式导演（切句 + 手势目录 + 关键词意图分类）已删除——说什么、配什么动作一律交回模型决定。`Demo/Npc/` 另给了一份接线参考：`NpcProximityGreeter`（玩家进打招呼范围时上报世界事件，本地不出台词，宿主 `RequireComponent` 收到 `NpcAgentHost`）；世界侧的在册表与视野查询都在 `Runtime/Agent/World/`（`WorldSnapshotService` + 轻量 `WorldObservable`），Demo 层不再有第二份表。
 
 ## 编辑器入口
 
 - `Lin/LLM/Agent 沙盒` — 选人设直接对话，看每轮注入、声明的工具与动作。
 - `Lin/LLM/请求日志` — 每次请求的耗时、token 用量、缓存命中、工具调用摘要。
-- `AgentHost` Inspector — 工具门控三组（动作 / 公共工具 / 本体工具）、扫描并同步、快速添加成员工具组件、只读持久化记忆。
+- `AgentHost` Inspector — 工具门控三组（动作 / 公共工具 / 本体工具）、扫描并同步、快速添加成员工具组件、只读持久化记忆。`NpcAgentHost` 由同一个 Inspector 接管（`editorForChildClasses`），上面再多一节「世界/个体快照」：总开关 + 观测名 + 在场者半径/名额。
 
 ## 已知取舍
 
