@@ -1,7 +1,7 @@
 /*
 ┌────────────────────────────┐
 │　Description: 世界静态段整段缓存用例
-│　Remark: 只验"同引用返回 + revision 驱动重算"两件事，
+│　Remark: 只验"同引用返回 + revision 驱动重算 + 排序与注册顺序无关"三件事，
 │　　　　　 不建场景、不碰模型
 │　ClassName: WorldSnapshotServiceLoreTests
 └────────────────────────────┘
@@ -13,7 +13,7 @@ using NUnit.Framework;
 
 namespace LLM.Tests.Editor.World
 {
-    /// <summary>世界静态段：整段缓存命中返回同一 string 引用，注册列表变化才重算</summary>
+    /// <summary>世界静态段：整段缓存命中返回同一 string 引用，注册列表变化才重算，输出文本与注册顺序无关</summary>
     [TestFixture]
     public class WorldSnapshotServiceLoreTests
     {
@@ -62,6 +62,31 @@ namespace LLM.Tests.Editor.World
             Add("前半段", 1);
 
             Assert.AreEqual("前半段\n后半段", WorldSnapshotService.RenderLore());
+        }
+
+        [Test]
+        public void SameTypeSameOrder_RenderIsStableAcrossRegistrationOrder()
+        {
+            // 同一个 FakeLore 类型、同一个 Order，只有文本不同：排序键前两档全等，
+            // 若就此打平，输出顺序就等于注册顺序（= Awake 先后），静态段不再逐字节稳定
+            var north = Add("矿镇的北边有座钟楼", 1);
+            var south = Add("矿镇的南边有条冰河", 1);
+
+            string forward = WorldSnapshotService.RenderLore();
+
+            // 反序重注册推 loreRevision：不失效的话第二次直接端回上一轮的缓存，
+            // 排序根本没跑过，这个用例就变成自证
+            WorldSnapshotService.Unregister(north);
+            WorldSnapshotService.Unregister(south);
+            WorldSnapshotService.Register(south);
+            WorldSnapshotService.Register(north);
+
+            string reversed = WorldSnapshotService.RenderLore();
+
+            Assert.AreEqual(2, north.Calls, "第二次必须真的重算并重新排过，不能命中上一轮的缓存");
+            Assert.AreEqual(forward, reversed, "同一批贡献者换个注册顺序，文本必须一字不差");
+            // 期望串按渲染文本的 ordinal 定序："北"(U+5317) < "南"(U+5357)
+            Assert.AreEqual("矿镇的北边有座钟楼\n矿镇的南边有条冰河", reversed);
         }
 
         [Test]
