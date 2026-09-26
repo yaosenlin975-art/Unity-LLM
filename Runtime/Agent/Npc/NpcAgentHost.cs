@@ -72,8 +72,9 @@ namespace LLM.Runtime.Agent.Npc
 
         #region - 生命周期 -
 
-        // 双身份检查只放在 Awake：它每个实例只跑一遍，"警告一次"天然成立，不用另立标志位；
-        // 它也早于任何 OnEnable，所以让位动作不会漏在"轻量那个已经登记之后"这条顺序上
+        // 双身份检查只放在 Awake：它每个实例只跑一遍，"警告一次"天然成立，不用另立标志位。
+        // 顺序上两种情况都收敛（见 SupersedeLightweightIdentity）： Awake 早于轻量那个的 OnEnable
+        // 就压根不登记，晚于它就靠关掉它触发的 OnDisable 出册
         private void Awake()
         {
             SupersedeLightweightIdentity();
@@ -86,7 +87,9 @@ namespace LLM.Runtime.Agent.Npc
         }
 
         // 注销绑在启用态上（形状同 WorldObservable）：禁用即出册，物体被 Destroy 时
-        // OnDisable 也跟着走这条路，所以子层级组件注册进来的贡献者不需要自己配对
+        // OnDisable 也跟着走这条路，所以"我这个身份"不需要调用方配对注销。
+        // 注意这只覆盖在册身份：profiles/states 里的贡献者仍要自己注销——缓存键只看注册列表，
+        // 贡献者被销毁而列表没变时，旧文本会一直留到下一次注册变化（判活只兜住不抛异常）
         protected override void OnDisable()
         {
             WorldSnapshotService.Unregister((IWorldObservable)this);
