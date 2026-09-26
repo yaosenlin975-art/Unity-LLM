@@ -238,7 +238,8 @@ namespace LLM.Runtime.Agent
 
             try
             {
-                answer = await session.AskAsync(input, HandleChunk, BuildInjection(), false, ct);
+                answer = await session.AskAsync(input, HandleChunk,
+                    BuildStableInjection(), BuildInjection(), false, ct);
 
                 // session 对轮间取消是优雅返回而非抛 OCE：墙钟到点落在工具轮之间时，
                 // 不在这里补映射，超时会被记成 Completed，FallbackLines 也永远轮不到
@@ -371,34 +372,33 @@ namespace LLM.Runtime.Agent
         #region 注入与承诺
 
         /// <summary>
-        /// 每轮重拼的三段：事实槽 → 核心快照 → QueryableHint。
-        /// 顺序固定，且最终拼在同一条 system 消息尾部，靠"前缀逐字节稳定"省缓存。
+        /// 静态段：宿主的世界/个体设定 + 可查询提示。内容约定不变，进 system 的稳定前缀。
+        /// 真正的缓存发生在 WorldSnapshotService / NpcAgentHost 里，这里只是每轮取一次。
         /// </summary>
+        private string BuildStableInjection()
+        {
+            return JoinSections(world?.GetStableContext(), profile?.QueryableHint);
+        }
+
+        /// <summary>动态段：事实槽 → 世界现状 + 个体状态。每轮起轮时求值一次，轮内冻结</summary>
         private string BuildInjection()
         {
+            return JoinSections(Memory.RenderBlock(), world?.GetCoreSnapshot());
+        }
+
+        /// <summary>
+        /// 段间一个换行，空段跳过：全空时返回空串，LLMSession 那头连块都不建。
+        /// 只有一侧非空时直返该侧引用，不产新字符串——同一份内容跨轮拿到的还是同一段文本。
+        /// </summary>
+        private static string JoinSections(string first, string second)
+        {
+            if (string.IsNullOrEmpty(first)) return second ?? "";
+            if (string.IsNullOrEmpty(second)) return first;
+
             using var sb = ZString.CreateStringBuilder();
-
-            var facts = Memory.RenderBlock();
-            if (!string.IsNullOrEmpty(facts))
-            {
-                sb.Append(facts);
-                sb.Append("\n");
-            }
-
-            var snapshot = world?.GetCoreSnapshot();
-            if (!string.IsNullOrEmpty(snapshot))
-            {
-                if (sb.Length > 0) sb.Append("\n");
-                sb.Append(snapshot);
-            }
-
-            var hint = profile?.QueryableHint;
-            if (!string.IsNullOrEmpty(hint))
-            {
-                if (sb.Length > 0) sb.Append("\n");
-                sb.Append(hint);
-            }
-
+            sb.Append(first);
+            sb.Append("\n");
+            sb.Append(second);
             return sb.ToString();
         }
 
