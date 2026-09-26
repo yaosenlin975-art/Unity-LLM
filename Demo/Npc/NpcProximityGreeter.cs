@@ -19,14 +19,15 @@ using Random = UnityEngine.Random;
 namespace LLM.Demo.Agent.Npc
 {
     /// <summary>
-    /// 挂在有 <see cref="AgentHost"/> 的 NPC 上：玩家走进触发体，就按好感档抽一次概率，
+    /// 挂在有 <see cref="NpcAgentHost"/> 的 NPC 上：玩家走进触发体，就按好感档抽一次概率，
     /// 抽中了只发一条世界事件（<see cref="AgentHost.Notify"/>）——说不说话、说什么、要不要配动作，由 NPC 自己决定。
     /// 本地不产台词，所以也不需要往会话历史里补一句 NPC 没说过的话。
     /// 接线要求：NPC 有 Collider 且 isTrigger，玩家带 tag=Player 且身上有 Rigidbody，否则收不到 Enter；
-    /// NPC 自己身上还要有 <see cref="IWorldObservable"/> 实现，拿不到就不搭话（见 <see cref="HasObservable"/>）。
+    /// 观测身份由宿主自己提供（<see cref="NpcAgentHost"/> 就是 <see cref="IWorldObservable"/> 的实现者），
+    /// 拿不到身份就不搭话（见 <see cref="HasObservable"/>）。
     /// </summary>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(AgentHost))]
+    [RequireComponent(typeof(NpcAgentHost))]
     public sealed class NpcProximityGreeter : MonoBehaviour
     {
         [Serializable]
@@ -56,8 +57,11 @@ namespace LLM.Demo.Agent.Npc
         private NpcAffinityController affinity;
 
         // NPC 自己也得是可被感知物：不然它会在"你看到的在场者"里念出自己的名字。
-        // RequireComponent 不收接口，所以这里按接口取，拿不到就在 OnTriggerEnter 里拒发事件。
-        // 现在的来源是手动挂一个 WorldObservable，Task 8 起由 NpcAgentHost 自己承担
+        // 身份的来源就是宿主本身（NpcAgentHost 实现 IWorldObservable）。仍按接口取、拿不到就拒绝搭话，
+        // 是因为这条链上还有一个真实的落空场景：宿主是基类 AgentHost 的旧资产
+        // （本类的 RequireComponent 到这一版才从 AgentHost 收紧到 NpcAgentHost）。
+        // 那时 self 为 null，RenderFacts 的 except 也跟着是 null，NPC 会把自己列进在场者——
+        // 正好犯下本类一直在防的那件事，所以宁可不搭话
         private IWorldObservable self;
 
         private bool warnedMissingObservable;
@@ -123,7 +127,7 @@ namespace LLM.Demo.Agent.Npc
             warnedMissingObservable = true;
 
             Log.Warning(nameof(NpcProximityGreeter),
-                "同一个物体上没有 IWorldObservable 实现，不搭话——否则会把自己列进「你看到的在场者」。给宿主挂一个 WorldObservable（Task 8 起由 NpcAgentHost 承担）",
+                "同一个物体上没有 IWorldObservable 实现，不搭话——否则会把自己列进「你看到的在场者」。宿主需是 NpcAgentHost（它自己就是观测身份），旧预制体上还是基类 AgentHost 时换掉即可",
                 this);
         }
 
