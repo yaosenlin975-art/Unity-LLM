@@ -176,6 +176,21 @@ Warn / Block feedback always instructs the model to answer briefly from what it 
 
 **Three injection points** on `LLMSession`: `ToolExecutor` replaces how a `tool_call` lands (async, interception, timeouts live there; `AbortTurn` skips the remaining calls of the batch without backfilling them); `ExtraTools` adds declarations outside the registry (kernel actions travel here); `AskAsync(..., writeHistory: false)` lets the caller decide whether the turn is stored. `EnableTools = false` disables declaration and execution together.
 
+Besides the long-lived `AddContext` blocks, `AskAsync` takes **two injection slots per turn** — the stable one first, the ephemeral one last, so every change point sits at the tail of the system message:
+
+```csharp
+public async UniTask<string> AskAsync(string userText,
+    Action<LLMStreamChunk> onChunkCallback = null,
+    string stableContext = null,          // new: world/self static sections
+    string ephemeralContext = null,       // was the 3rd parameter
+    bool writeHistory = true,
+    CancellationToken ct = default)
+```
+
+The new parameter is **not** appended at the end, which makes the change breaking in a way the compiler cannot catch: an old positional call passing a third `string` (then `ephemeralContext`) still compiles as `string → string`, but that per-turn-changing text now sits in the stable slot — the first change point moves earlier, so everything behind it stops hitting the prefix cache while the persona and long-lived blocks in front keep hitting. Switch to named arguments, or re-check positions 3 and 4.
+
+Two rules carry over to every contributor: static sections are recomputed **only when the registration list changes**, so a contributor that gets destroyed without unregistering leaves its old text inside the snapshot until somebody registers or unregisters — the liveness check during rendering only guarantees no exception, not fresh text. The full layering (four content kinds, cache keys, ordering keys) is documented in `README.md` section 「世界/个体快照」 (Chinese) and in `docs/adr/ADR-030`.
+
 ---
 
 ## 3 · AgentAction (side effects)
@@ -229,7 +244,7 @@ host.Trigger("The player clicked Talk");                         // starts a tur
 host.Notify("The player left the shop");                         // world event, marked as such in the prompt
 ```
 
-4. World state injected per turn comes from `host.SetCoreSnapshot(...)`: `AgentHost` implements `IWorldContextProvider` itself and returns `coreSnapshot` plus the affinity line. Only if you skip `AgentHost` do you implement that interface. Keep it low-frequency (identity, goals, relationship level); fast-changing values belong in query tools. `QueryableHint` is the single guidance slot on the profile — when non-empty it injects one "You may query: …" line.
+4. World state injected per turn: an NPC hosted by `NpcAgentHost` gets it from the world/self snapshot sections, and `host.SetCoreSnapshot(...)` drops back to a fallback (used when the snapshot toggle is off or nothing registered a contributor yet). A plain `AgentHost` still returns `coreSnapshot` plus the affinity line — it implements `IWorldContextProvider` itself, and you only implement that interface when you skip the host altogether. Keep it low-frequency (identity, goals, relationship level); fast-changing values belong in query tools. `QueryableHint` is the single guidance slot on the profile — when non-empty it injects one "You may query: …" line, and it belongs to the **stable** section.
 5. Without `AgentHost`: `new AgentCore(profile, instanceId, ctx, output, runner, toolGate, toolSet)`, call `core.Tick()` yourself each frame and `Dispose()` on teardown.
 6. The `AgentHost` Inspector has a read-only persisted-memory block: when `AgentFactsStoreType` is configured, resolvable, and there is a stable `instanceId`, it lists the fact slots stored under `{ProfileKey}#{instanceId}`. "Not configured" and "configured but the type is gone" are two different hints. Conversation history is not shown and nothing is editable.
 
@@ -302,13 +317,13 @@ Edit the three fields outside Play mode, or save the asset with `Ctrl+S` (SetDir
 
 ## NPC presentation layer (optional)
 
-`NpcAgentProfile_SO` (identity / personality / speech style / goals & values / knowledge boundary / `InitialAffinity`) and `NpcAffinityController` (affinity and relationship level, also callable from gameplay via `AdjustFromGame`). Animation backends implement `IAgentAnimationDriver` in the gameplay layer; this plugin references no animation type. What the model can play is exposed through the member tools/actions in `AgentAnimationTools` (`list_animation_states` / `play_animation_state` / `set_animation_parameter`). The local "gesture while speaking" director (clause splitting, gesture catalog, keyword intent classifier) has been removed — what to say and which animation to play is the model's call. `Demo/Npc/` ships a host-side reference implementation: `WorldObservable` + `WorldObservableManager` (registry and line-of-sight query) plus `NpcProximityGreeter`, which reports a world event when the player walks into greeting range and never speaks a scripted line.
+`NpcAgentProfile_SO` (identity / personality / speech style / goals & values / knowledge boundary / `InitialAffinity`) and `NpcAffinityController` (affinity and relationship level, also callable from gameplay via `AdjustFromGame`). Animation backends implement `IAgentAnimationDriver` in the gameplay layer; this plugin references no animation type. What the model can play is exposed through the member tools/actions in `AgentAnimationTools` (`list_animation_states` / `play_animation_state` / `set_animation_parameter`). The local "gesture while speaking" director (clause splitting, gesture catalog, keyword intent classifier) has been removed — what to say and which animation to play is the model's call. `Demo/Npc/` ships a wiring reference: `NpcProximityGreeter`, which reports a world event when the player walks into greeting range and never speaks a scripted line (its `[RequireComponent]` is `NpcAgentHost`). The registry and the line-of-sight query both live in `Runtime/Agent/World/` (`WorldSnapshotService` plus the lightweight `WorldObservable`); the Demo layer no longer keeps a second table.
 
 ## Editor entry points
 
 - `Lin/LLM/Agent 沙盒` — pick a profile and chat; per-turn injections and declared tools/actions visible.
 - `Lin/LLM/请求日志` — latency, token usage, cache hits and tool-call summary per request.
-- `AgentHost` Inspector — three tool groups (actions / shared tools / own tools), scan & sync, quick-add member tool components, read-only persisted memory.
+- `AgentHost` Inspector — three tool groups (actions / shared tools / own tools), scan & sync, quick-add member tool components, read-only persisted memory. The same editor takes over `NpcAgentHost` (`editorForChildClasses`) and adds a 「世界/个体快照」 block there: snapshot toggle, observed label, peer radius and max peers.
 
 ## Known trade-offs
 
