@@ -146,9 +146,16 @@ namespace LLM.Demo.Agent.Npc
             // 在场者与全局事实整段交框架产出（半径/名额沿用 Inspector 的两个字段）。
             // ponytail: 玩家若也在册，会同时出现在首句和在场者列表里并占掉一个名额——
             // RenderFacts 的 except 只认一个目标，为这个边缘再加一组排除参数不划算
-            return ZString.Format("玩家「{0}」走进了你的打招呼范围，距离 {1:0.0} 米。\n{2}",
-                ResolveLabel(player), distance,
-                WorldSnapshotService.RenderFacts(transform.position, self, observeRadius, observeMaxCount));
+            var facts = WorldSnapshotService.RenderFacts(transform.position, self, observeRadius, observeMaxCount);
+
+            // 框架没人可报时返回空串，直接插进 {2} 会让正文以换行收尾。空串必须补一句"没有别人"：
+            // 缺席本身是信息（旧实现就有这句），只留个换行会被模型读成"这一项未知"而不是"场上只剩我"
+            var body = string.IsNullOrEmpty(facts)
+                ? "。你身边没有别人。"
+                : ZString.Concat("。\n", facts);
+
+            return ZString.Format("玩家「{0}」走进了你的打招呼范围，距离 {1:0.0} 米{2}",
+                ResolveLabel(player), distance, body);
         }
     }
 }
