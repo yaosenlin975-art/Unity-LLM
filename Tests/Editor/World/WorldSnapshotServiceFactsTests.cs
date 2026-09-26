@@ -8,6 +8,7 @@
 */
 
 using System.Collections.Generic;
+using Cysharp.Text;
 using LLM.Runtime.Agent.World;
 using NUnit.Framework;
 using UnityEngine;
@@ -16,8 +17,23 @@ using Object = UnityEngine.Object;
 namespace LLM.Tests.Editor.World
 {
     /// <summary>
+    /// 挂在物体上的假事实贡献者：只为判活用例存在——必须真是 UnityEngine.Object 派生，
+    /// DestroyImmediate 才能把它打成残骸（纯 C# 的 FakeFact 没有残骸态，测不到那条分支）。
+    /// RenderFact 刻意读 transform：真实贡献者渲染全局事实时访问自身部件是常态，
+    /// 残骸若没被判活拦下就在那里抛 MissingReferenceException，用例不会恒真
+    /// </summary>
+    internal sealed class FakeSceneFact : MonoBehaviour, IWorldFactContributor
+    {
+        public string Text;
+
+        public int Order => 0;
+
+        public string RenderFact() => ZString.Format("{0}：{1}", transform.name, Text);
+    }
+
+    /// <summary>
     /// 世界动态段：全局事实 + 按请求者现算的在场者。
-    /// 覆盖四件事——拼接与格式、三档排序键的确定性、每轮现算绝不缓存、已销毁观测物的判活
+    /// 覆盖四件事——拼接与格式、三档排序键的确定性、每轮现算绝不缓存、已销毁在册项的判活
     /// </summary>
     [TestFixture]
     public class WorldSnapshotServiceFactsTests
@@ -41,15 +57,17 @@ namespace LLM.Tests.Editor.World
         private readonly List<GameObject> gos = new();
         private readonly List<IWorldObservable> items = new();
         private readonly List<FakeFact> facts = new();
+        private readonly List<FakeSceneFact> sceneFacts = new();
 
         [TearDown]
         public void TearDown()
         {
             for (int i = 0; i < facts.Count; i++) WorldSnapshotService.Unregister(facts[i]);
+            for (int i = 0; i < sceneFacts.Count; i++) WorldSnapshotService.Unregister(sceneFacts[i]);
             for (int i = 0; i < items.Count; i++) WorldSnapshotService.Unregister(items[i]);
             for (int i = 0; i < gos.Count; i++)
                 if (gos[i] != null) Object.DestroyImmediate(gos[i]);
-            gos.Clear(); items.Clear(); facts.Clear();
+            gos.Clear(); items.Clear(); facts.Clear(); sceneFacts.Clear();
         }
 
         private FakeObservable Add(string label, float x, string state = "")
@@ -69,6 +87,18 @@ namespace LLM.Tests.Editor.World
         {
             var fact = new FakeFact { Sequence = sequence };
             facts.Add(fact);
+            WorldSnapshotService.Register(fact);
+            return fact;
+        }
+
+        /// <summary>注册一个挂在物体上的事实贡献者（GameObject 由 gos 表统一清理）</summary>
+        private FakeSceneFact AddSceneFact(string label, string text)
+        {
+            var go = new GameObject(label);
+            var fact = go.AddComponent<FakeSceneFact>();
+            fact.Text = text;
+            gos.Add(go);
+            sceneFacts.Add(fact);
             WorldSnapshotService.Register(fact);
             return fact;
         }
@@ -195,6 +225,21 @@ namespace LLM.Tests.Editor.World
             string text = WorldSnapshotService.RenderFacts(Vector3.zero, null, 10f, 6);
 
             Assert.AreEqual("活人(1.0米)", text);
+        }
+
+        [Test]
+        public void DestroyedFactContributor_IsSkippedWithoutThrowing()
+        {
+            // 与在场者那条同形：残骸在册且不注销，判活若不走 Unity 语义，
+            // FakeSceneFact.RenderFact 里读 transform 就抛 MissingReferenceException。
+            // 残骸的话术也不许混进输出——它说的是上一局的事
+            AddSceneFact("残骸气象站", "午后起了风");
+            Object.DestroyImmediate(gos[gos.Count - 1]);
+            AddSceneFact("气象站", "晴");
+
+            string text = WorldSnapshotService.RenderFacts(Vector3.zero, null, 10f, 6);
+
+            Assert.AreEqual("气象站：晴", text);
         }
     }
 }

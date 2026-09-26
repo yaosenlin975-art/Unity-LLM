@@ -34,8 +34,8 @@ namespace LLM.Runtime.Agent.World
         private static long loreTextRevision = -1;
 
         // 在场者收集复用表：动态段每轮每个 NPC 都要跑，是热路径，不每轮 new。
-        // 只在 RenderFacts 内部进出（CollectPeers 进、AppendPeers 出），不跨帧持有引用；
-        // AppendPeers 不会再调 RenderFacts，重入安全。动态段本身绝不缓存——在场者依赖
+        // 只在 RenderFacts 内部进出（CollectPeers 进、BuildPeersText 出），不跨帧持有引用；
+        // BuildPeersText 不会再调 RenderFacts，重入安全。动态段本身绝不缓存——在场者依赖
         // 请求者的 origin 与 except，整段缓存会让所有 NPC 拿到同一份"身边有谁"
         private static readonly List<Peer> peerScratch = new();
         #endregion
@@ -126,53 +126,55 @@ namespace LLM.Runtime.Agent.World
         public static string RenderFacts(Vector3 origin, IWorldObservable except,
             float radius, int maxPeers)
         {
-            // sb 不能用 using 声明——using 变量禁止 ref 传参（CS1657），而 AppendPeers 必须
-            // 以 ref 拿到同一个 builder 追加（Utf16ValueStringBuilder 是 struct，按值传全丢）。
-            // 改手动 try/finally，Dispose 语义不丢
-            var sb = ZString.CreateStringBuilder();
-            try
+            using var sb = ZString.CreateStringBuilder();
+
+            if (facts.Count > 0)
             {
-                if (facts.Count > 0)
+                // 先渲染后排序（同 RenderLore 的三档键）：末档键就是渲染出来的文本，
+                // 只能先把文本取出来。这里不整段缓存，但顺序仍要确定——
+                // 排序退化成注册顺序的话，动态段会在没有任何事实变化时白白抖动
+                var segments = new List<FactSegment>(facts.Count);
+                for (int i = 0; i < facts.Count; i++)
                 {
-                    // 先渲染后排序（同 RenderLore 的三档键）：末档键就是渲染出来的文本，
-                    // 只能先把文本取出来。这里不整段缓存，但顺序仍要确定——
-                    // 排序退化成注册顺序的话，动态段会在没有任何事实变化时白白抖动
-                    var segments = new List<FactSegment>(facts.Count);
-                    for (int i = 0; i < facts.Count; i++)
-                    {
-                        var contributor = facts[i];
-                        var text = contributor.RenderFact();
-                        if (string.IsNullOrEmpty(text)) continue;
+                    var contributor = facts[i];
 
-                        segments.Add(new FactSegment(contributor.Order, contributor.GetType().Name, text));
-                    }
+                    // 判活必须走 Unity 语义（R10，与 CollectPeers 同一条）：facts 存的也是接口引用，
+                    // contributor == null 编译期选不到 UnityEngine.Object 的 == 重载，是纯引用判空，
+                    // 拦不住已销毁的贡献者。伤害不在取属性，而在 RenderFact 内部——贡献者渲染
+                    // 全局事实时读自己的 transform / gameObject 是常态，残骸一旦在册就是
+                    // MissingReferenceException，整段动态段渲染不出来。
+                    // 方向仍是"仅拦已销毁的 Unity 对象"：纯 C# 实现没有原生侧、不存在残骸态，
+                    // 照常参与事实段（判活形式若写成"只留 Unity 对象"会把它们一起吞掉）
+                    if (contributor is UnityEngine.Object unityObj && unityObj == null) continue;
 
-                    // 排的是片段副本，facts 本身保持注册顺序
-                    segments.Sort(CompareFactSegment);
+                    var text = contributor.RenderFact();
+                    if (string.IsNullOrEmpty(text)) continue;
 
-                    for (int i = 0; i < segments.Count; i++)
-                    {
-                        if (sb.Length > 0) sb.Append("\n");
-                        sb.Append(segments[i].Text);
-                    }
+                    segments.Add(new FactSegment(contributor.Order, contributor.GetType().Name, text));
                 }
 
-                if (radius > 0f && observed.Count > 0)
-                {
-                    var peers = CollectPeers(origin, except, radius, maxPeers, out int truncated);
-                    if (peers.Count > 0)
-                    {
-                        if (sb.Length > 0) sb.Append("\n");
-                        AppendPeers(ref sb, peers, truncated);
-                    }
-                }
+                // 排的是片段副本，facts 本身保持注册顺序
+                segments.Sort(CompareFactSegment);
 
-                return sb.ToString();
+                for (int i = 0; i < segments.Count; i++)
+                {
+                    if (sb.Length > 0) sb.Append("\n");
+                    sb.Append(segments[i].Text);
+                }
             }
-            finally
+
+            if (radius > 0f && observed.Count > 0)
             {
-                sb.Dispose();
+                var peers = CollectPeers(origin, except, radius, maxPeers, out int truncated);
+                var peersText = BuildPeersText(peers, truncated);
+                if (!string.IsNullOrEmpty(peersText))
+                {
+                    if (sb.Length > 0) sb.Append("\n");
+                    sb.Append(peersText);
+                }
             }
+
+            return sb.ToString();
         }
 
         public static void Register(IWorldObservable item)
@@ -315,9 +317,19 @@ namespace LLM.Runtime.Agent.World
             return string.CompareOrdinal(a.State, b.State);
         }
 
-        // Utf16ValueStringBuilder 是 struct，不加 ref 的话追加全落在副本上，文本静默丢失
-        private static void AppendPeers(ref Utf16ValueStringBuilder sb, List<Peer> peers, int truncated)
+        /// <summary>
+        /// 在场者段文本：`甲(1.0米)、乙(2.0米|正在挖)，另有 1 个未列出`。
+        /// 返回 string 而不是往调用方的 builder 里追加：Utf16ValueStringBuilder 是 struct，
+        /// 按值传进去追加全落在副本上，要拿到同一个实例就得 ref 传；而 using 声明出来的
+        /// builder 又禁止 ref 传（CS1657），helper 就会逼出手动 try/finally 与多一层缩进。
+        /// 约定 helper 一律自持 builder、返回 string，谁都不接 sb（Task 6 的段落 helper 照此）
+        /// </summary>
+        /// <returns>peers 为空时返回空串，由调用方判空后再决定要不要补分段换行</returns>
+        private static string BuildPeersText(List<Peer> peers, int truncated)
         {
+            if (peers.Count == 0) return "";
+
+            using var sb = ZString.CreateStringBuilder();
             for (int i = 0; i < peers.Count; i++)
             {
                 if (i > 0) sb.Append("、");
@@ -331,6 +343,8 @@ namespace LLM.Runtime.Agent.World
             // 截断必须报数：不报，模型会以为场上只剩列出来的这几个
             if (truncated > 0)
                 sb.Append(ZString.Format("，另有 {0} 个未列出", truncated));
+
+            return sb.ToString();
         }
 
         private static bool Contains<T>(List<T> list, T item)
@@ -375,8 +389,8 @@ namespace LLM.Runtime.Agent.World
 
         /// <summary>
         /// 在场者的一条渲染素材：名字、到请求者的距离（米）、自我状态。
-        /// 三档排序键全在这里，渲染文本本身不作字段——行文本由 AppendPeers 现拼。
-        /// 只在 CollectPeers→AppendPeers 之间存活，随复用表跨轮清空重用
+        /// 三档排序键全在这里，渲染文本本身不作字段——行文本由 BuildPeersText 现拼。
+        /// 只在 CollectPeers→BuildPeersText 之间存活，随复用表跨轮清空重用
         /// </summary>
         private struct Peer
         {
