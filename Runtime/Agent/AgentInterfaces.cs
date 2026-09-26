@@ -14,9 +14,16 @@ using UnityEngine;
 
 namespace LLM.Runtime.Agent
 {
-    /// <summary>世界状态只读入口。只放低频值（身份、目标、关系等级），每轮都变的东西走 observe 工具</summary>
+    /// <summary>
+    /// 世界状态只读入口，按"变不变"分两段：静态段进 system 的稳定前缀让 provider 命中缓存，
+    /// 动态段每轮重取。返回 null 或空串 = 这个宿主没有这一段，内核跳过拼接。
+    /// </summary>
     public interface IWorldContextProvider
     {
+        /// <summary>静态段：世界设定 + 个体能力。内容约定不变，留在 system 稳定前缀里</summary>
+        string GetStableContext();
+
+        /// <summary>动态段：世界现状 + 个体状态 + 好感。每轮起轮时取一次，轮内冻结</summary>
         string GetCoreSnapshot();
     }
 

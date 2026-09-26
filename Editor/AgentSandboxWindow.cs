@@ -437,6 +437,12 @@ namespace LLM.Editor
 
         #region - 接口实现：IWorldContextProvider -
 
+        /// <summary>
+        /// 沙盒没有世界与个体：静态段留空。手填的那块快照每轮都可能改，
+        /// 塞进静态段会让"稳定前缀"名不副实，缓存反而全废
+        /// </summary>
+        string IWorldContextProvider.GetStableContext() => null;
+
         string IWorldContextProvider.GetCoreSnapshot()
         {
             return worldSnapshot;
