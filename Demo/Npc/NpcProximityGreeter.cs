@@ -9,8 +9,10 @@
 
 using System;
 using Cysharp.Text;
+using LLM.Runtime;
 using LLM.Runtime.Agent;
 using LLM.Runtime.Agent.Npc;
+using LLM.Runtime.Agent.World;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -20,12 +22,11 @@ namespace LLM.Demo.Agent.Npc
     /// 挂在有 <see cref="AgentHost"/> 的 NPC 上：玩家走进触发体，就按好感档抽一次概率，
     /// 抽中了只发一条世界事件（<see cref="AgentHost.Notify"/>）——说不说话、说什么、要不要配动作，由 NPC 自己决定。
     /// 本地不产台词，所以也不需要往会话历史里补一句 NPC 没说过的话。
-    /// 接线要求：NPC 有 Collider 且 isTrigger，玩家带 tag=Player 且身上有 Rigidbody，否则收不到 Enter。
+    /// 接线要求：NPC 有 Collider 且 isTrigger，玩家带 tag=Player 且身上有 Rigidbody，否则收不到 Enter；
+    /// NPC 自己身上还要有 <see cref="IWorldObservable"/> 实现，拿不到就不搭话（见 <see cref="HasObservable"/>）。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AgentHost))]
-    // NPC 自己也得是可被感知物：不然它会在"你看到的在场者"里念出自己的名字
-    [RequireComponent(typeof(WorldObservable))]
     public sealed class NpcProximityGreeter : MonoBehaviour
     {
         [Serializable]
@@ -53,15 +54,20 @@ namespace LLM.Demo.Agent.Npc
 
         private AgentHost host;
         private NpcAffinityController affinity;
-        private WorldObservable self;
-        private readonly System.Collections.Generic.List<ObservedInfo> nearby = new();
+
+        // NPC 自己也得是可被感知物：不然它会在"你看到的在场者"里念出自己的名字。
+        // RequireComponent 不收接口，所以这里按接口取，拿不到就在 OnTriggerEnter 里拒发事件。
+        // 现在的来源是手动挂一个 WorldObservable，Task 8 起由 NpcAgentHost 自己承担
+        private IWorldObservable self;
+
+        private bool warnedMissingObservable;
         private float lastNotifiedAt = float.NegativeInfinity;
 
         private void Awake()
         {
             host = GetComponent<AgentHost>();
             affinity = GetComponentInChildren<NpcAffinityController>(true);
-            self = GetComponent<WorldObservable>();
+            self = GetComponent<IWorldObservable>();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -72,6 +78,14 @@ namespace LLM.Demo.Agent.Npc
             // 在飞时 Notify 会抬代际并顶掉 pendingInput 单槽，等于用一句招呼打断玩家正在等的回答
             if (host.Core.IsBusy) return;
 
+            // 没有观测身份就宁可不搭话：self 为 null 时 RenderFacts 的 except 也是 null，
+            // NPC 会把自己列进"你看到的在场者"，正好犯下本类一直在防的那件事
+            if (!HasObservable)
+            {
+                WarnMissingObservable();
+                return;
+            }
+
             float now = Time.time;
             if (now - lastNotifiedAt < cooldownSeconds) return;
 
@@ -81,6 +95,14 @@ namespace LLM.Demo.Agent.Npc
             lastNotifiedAt = now;
             host.Notify(BuildEvent(other.gameObject));
         }
+
+        /// <summary>
+        /// 身上的观测身份还在不在。判活走 Unity 语义（与 <c>WorldSnapshotService</c> 的遍历同形）：
+        /// 接口引用上的 == null 选不到 <c>UnityEngine.Object</c> 重载，组件被单独 Destroy 后引用非空，
+        /// 取属性才抛。方向在这里不伤及无辜——GetComponent 只会返回 MonoBehaviour，
+        /// 不存在无原生侧的纯托管实现
+        /// </summary>
+        private bool HasObservable => self is UnityEngine.Object observable && observable != null;
 
         private bool RollGate(ENpcAffinityLevel level)
         {
@@ -94,44 +116,39 @@ namespace LLM.Demo.Agent.Npc
             return false;
         }
 
-        /// <summary>玩家物体名常是 "Player (1)"、"Capsule" 这种，喂给模型会被原样复述；挂了可监测物就用它的观测名。</summary>
-        private static string ResolveLabel(GameObject player)
+        /// <summary>接线缺一环就报一次，别每次进触发体刷一条：控制台会被埋掉，而配置错误看一次就够</summary>
+        private void WarnMissingObservable()
         {
-            var observable = player.GetComponentInParent<WorldObservable>();
-            return observable != null ? observable.ObservedLabel : player.name;
+            if (warnedMissingObservable) return;
+            warnedMissingObservable = true;
+
+            Log.Warning(nameof(NpcProximityGreeter),
+                "同一个物体上没有 IWorldObservable 实现，不搭话——否则会把自己列进「你看到的在场者」。给宿主挂一个 WorldObservable（Task 8 起由 NpcAgentHost 承担）",
+                this);
         }
 
-        /// <summary>只报事实（谁、多远、还有谁在场），不写"快打个招呼"这种祈使句——那等于每轮怂恿模型开口。</summary>
+        /// <summary>玩家物体名常是 "Player (1)"、"Capsule" 这种，喂给模型会被原样复述；挂了可观测物就用它的观测名</summary>
+        private static string ResolveLabel(GameObject player)
+        {
+            var observable = player.GetComponentInParent<IWorldObservable>();
+
+            // 判活同 HasObservable：残骸上的 ObservedLabel 一取就抛，宁可退回物体名
+            if (observable is UnityEngine.Object alive && alive != null) return observable.ObservedLabel;
+
+            return player.name;
+        }
+
+        /// <summary>只报事实（谁、多远、还有谁在场），不写"快打个招呼"这种祈使句——那等于每轮怂恿模型开口</summary>
         private string BuildEvent(GameObject player)
         {
             float distance = (player.transform.position - transform.position).magnitude;
 
-            using var sb = ZString.CreateStringBuilder();
-            sb.Append(ZString.Format("玩家「{0}」走进了你的打招呼范围，距离 {1:0.0} 米。", ResolveLabel(player), distance));
-
-            int truncated = WorldObservableManager.CollectNearby(
-                transform.position, observeRadius, observeMaxCount, self, nearby);
-
-            if (nearby.Count == 0)
-            {
-                sb.Append("你身边没有别人。");
-                return sb.ToString();
-            }
-
-            // ponytail: 玩家若也挂了可监测物，会同时出现在首句和这份列表里并占掉一个名额。
-            // 挤掉一个别人比再给查询接口加一组排除参数便宜；真要精确再改成多目标排除
-            sb.Append("你看到的在场者：");
-            for (int i = 0; i < nearby.Count; i++)
-            {
-                if (i > 0) sb.Append("、");
-                sb.Append(nearby[i].Label);
-                sb.Append(ZString.Format("({0:0.0}米)", nearby[i].Distance));
-            }
-
-            if (truncated > 0)
-                sb.Append(ZString.Format("，另有 {0} 个未列出", truncated));
-
-            return sb.ToString();
+            // 在场者与全局事实整段交框架产出（半径/名额沿用 Inspector 的两个字段）。
+            // ponytail: 玩家若也在册，会同时出现在首句和在场者列表里并占掉一个名额——
+            // RenderFacts 的 except 只认一个目标，为这个边缘再加一组排除参数不划算
+            return ZString.Format("玩家「{0}」走进了你的打招呼范围，距离 {1:0.0} 米。\n{2}",
+                ResolveLabel(player), distance,
+                WorldSnapshotService.RenderFacts(transform.position, self, observeRadius, observeMaxCount));
         }
     }
 }
