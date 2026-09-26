@@ -3,7 +3,8 @@
 │　Description: AgentHost 自定义 Inspector
 │　Remark: 暴露每个实例的工具门控开关、
 │　　　　　 “扫描并同步”与成员组件快速添加、
-│　　　　　 只读的持久化记忆（事实槽）展示
+│　　　　　 只读的持久化记忆（事实槽）展示；
+│　　　　　 派生类 NpcAgentHost 另画一节世界/个体快照
 │　ClassName: AgentHostInspector
 └────────────────────────────┘
 */
@@ -13,6 +14,7 @@ using System.Collections.Generic;
 using Cysharp.Text;
 using LLM.Runtime;
 using LLM.Runtime.Agent;
+using LLM.Runtime.Agent.Npc;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,10 +33,24 @@ namespace LLM.Editor
         private SerializedProperty coreSnapshot;
         private SerializedProperty toolToggles;
 
+        // 这四个是 NpcAgentHost（派生类）的字段，基类物体上取不到，取用前一律先判空
+        private SerializedProperty observedLabel;
+        private SerializedProperty includeSnapshot;
+        private SerializedProperty observeRadius;
+        private SerializedProperty observeMaxPeers;
+
         private static readonly GUIContent k_profileLabel = new("Agent 人设");
         private static readonly GUIContent k_instanceIdLabel = new("实例标识（存档键）");
         private static readonly GUIContent k_coreSnapshotLabel = new("核心快照");
         private static readonly GUIContent k_quickAddLabel = new("快速添加成员工具/动作组件");
+        private static readonly GUIContent k_observedLabelLabel = new("观测名",
+            "别人把你列进「在场者」时给模型看的名字，留空则用物体名。物体名常是 \"Player (1)\" 这种，模型会原样复述");
+        private static readonly GUIContent k_includeSnapshotLabel = new("注入世界/个体快照",
+            "总开关。关掉后四段快照整体不注入，只留好感度与本资产上手填的「核心快照」兜底");
+        private static readonly GUIContent k_observeRadiusLabel = new("在场者半径（米）",
+            "世界动态段里「在场者」的查询半径，按本物体的观测原点算距离。填 0 = 不列在场者");
+        private static readonly GUIContent k_observeMaxPeersLabel = new("在场者最多列几个",
+            "超出半径内人数时，多出来的人折叠成「另有 K 个未列出」而不是静默丢掉。填 0 = 不限个数");
 
         private bool memoryFoldout = true;
         private string memorySessionId;
@@ -49,6 +65,14 @@ namespace LLM.Editor
             coreSnapshot = serializedObject.FindProperty("coreSnapshot");
             toolToggles = serializedObject.FindProperty("toolToggles");
 
+            if (target is NpcAgentHost)
+            {
+                observedLabel = serializedObject.FindProperty("observedLabel");
+                includeSnapshot = serializedObject.FindProperty("includeSnapshot");
+                observeRadius = serializedObject.FindProperty("observeRadius");
+                observeMaxPeers = serializedObject.FindProperty("observeMaxPeers");
+            }
+
             ReloadMemory();
         }
 
@@ -60,10 +84,42 @@ namespace LLM.Editor
             EditorGUILayout.PropertyField(instanceId, k_instanceIdLabel);
             EditorGUILayout.PropertyField(coreSnapshot, k_coreSnapshotLabel);
 
+            DrawNpcSnapshotSettings();
             DrawToolToggles();
             DrawMemory();
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        /// <summary>
+        /// NpcAgentHost 的四个快照字段。本 Inspector 从不调 DrawDefaultInspector，而 Task 5 给
+        /// [CustomEditor] 开了 editorForChildClasses —— 于是它把 NpcAgentHost 的绘制也接管了。
+        /// 不在这里补画，那四个字段就是"序列化里存在、界面上画不出"，快照总开关根本没法配
+        /// </summary>
+        private void DrawNpcSnapshotSettings()
+        {
+            if (target is not NpcAgentHost) return;
+            if (observedLabel == null || includeSnapshot == null
+                || observeRadius == null || observeMaxPeers == null) return;
+
+            EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField("世界/个体快照", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "打开后每轮注入四段：世界设定 + 你的能力（静态段，内容不变才进得了 provider 的前缀缓存）‖ 世界现状 + 你的状态（动态段，每轮现问）。\n静态段只在贡献者注册列表变化时重算，所以注册过自己的贡献者被销毁时必须配对注销，否则旧文本会一直留在快照里。\n在场者由本物体的观测原点现算，永远排除自己。",
+                MessageType.None);
+
+            EditorGUILayout.PropertyField(includeSnapshot, k_includeSnapshotLabel);
+            EditorGUILayout.PropertyField(observedLabel, k_observedLabelLabel);
+
+            // 半径与名额只在总开关打开时参与渲染（RenderCoreSnapshot 会提前返回）。
+            // 灰掉而不是藏起来：藏了会让人以为这个组件压根没有这两项
+            using (new EditorGUI.DisabledScope(!includeSnapshot.boolValue))
+            {
+                EditorGUILayout.PropertyField(observeRadius, k_observeRadiusLabel);
+                EditorGUILayout.PropertyField(observeMaxPeers, k_observeMaxPeersLabel);
+                EditorGUILayout.LabelField("0 的语义",
+                    "半径 0 = 不列在场者；名额 0 = 不限个数", EditorStyles.miniLabel);
+            }
         }
 
         private void DrawToolToggles()
