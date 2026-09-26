@@ -19,7 +19,9 @@ using UnityEngine;
 namespace LLM.Editor
 {
     /// <summary>AgentHost 的原生 Inspector，不依赖 Odin/Sirenix</summary>
-    [CustomEditor(typeof(AgentHost))]
+    // 第二个参数 = editorForChildClasses。不加它，NpcAgentHost 的 Inspector 会静默退回默认绘制，
+    // 工具门控面板与快速添加菜单全部消失且不报错
+    [CustomEditor(typeof(AgentHost), true)]
     public sealed class AgentHostInspector : UnityEditor.Editor
     {
         private const float k_memoryScrollHeight = 160f;

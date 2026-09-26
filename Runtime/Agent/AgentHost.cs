@@ -2,7 +2,8 @@
 ┌────────────────────────────┐
 │　Description: Agent 场景生命周期宿主
 │　Remark: 将 MonoBehaviour 生命周期映射到
-│　　　　　 唯一 AgentCore
+│　　　　　 唯一 AgentCore；非 sealed，快照两段
+│　　　　　 与启用/禁用各留一个虚方法重写点
 │　ClassName: AgentHost
 └────────────────────────────┘
 */
@@ -15,8 +16,12 @@ using UnityEngine;
 
 namespace LLM.Runtime.Agent
 {
-    /// <summary>挂到场景物体上的 AgentCore 生命周期适配器。</summary>
-    public sealed class AgentHost : MonoBehaviour, IWorldContextProvider, IAgentToolGate
+    /// <summary>
+    /// 挂到场景物体上的 AgentCore 生命周期适配器。
+    /// 可直接实例化（纯聊天宿主就用它），同时是 NPC 宿主的基类：
+    /// 快照的静态段/动态段各留一个 <c>protected virtual</c> 重写点，子类不换内核就能换注入内容
+    /// </summary>
+    public class AgentHost : MonoBehaviour, IWorldContextProvider, IAgentToolGate
     {
         #region - 字段 -
 
@@ -61,12 +66,13 @@ namespace LLM.Runtime.Agent
 
         #region - 生命周期 -
 
-        private void OnEnable()
+        // Unity 靠继承的虚方法把消息发到子类，private 会挡住 NpcAgentHost 挂钩
+        protected virtual void OnEnable()
         {
             Activate(profile);
         }
 
-        private void OnDisable()
+        protected virtual void OnDisable()
         {
             Deactivate();
         }
@@ -234,7 +240,17 @@ namespace LLM.Runtime.Agent
 
         #region - 接口实现 -
 
-        string IWorldContextProvider.GetCoreSnapshot()
+        // 两段都只转发到虚方法：接口是显式实现，子类改不了它，能改的只有下面两个重写点。
+        // 若这里直取字段，NpcAgentHost 的重写会静默失效——注入照旧，内容永远缺四段
+        string IWorldContextProvider.GetStableContext() => RenderStableContext();
+
+        string IWorldContextProvider.GetCoreSnapshot() => RenderCoreSnapshot();
+
+        /// <summary>子类补世界/个体静态段；基类没有，返回 null 让 AgentCore 跳过</summary>
+        protected virtual string RenderStableContext() => null;
+
+        /// <summary>动态段基类实现：好感块 + Inspector 手填的兜底块，重构前后逐字同形</summary>
+        protected virtual string RenderCoreSnapshot()
         {
             if (affinityController is null) return coreSnapshot;
 
