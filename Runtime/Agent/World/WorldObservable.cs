@@ -30,8 +30,6 @@ namespace LLM.Runtime.Agent.World
 
         /// <summary>有状态要说就覆盖，没有就留空串——查询方会省略这一项</summary>
         public virtual string ObservableState => string.Empty;
-
-        public virtual int Order => 0;
         #endregion
 
         #region - 生命周期 -

@@ -62,9 +62,6 @@ namespace LLM.Runtime.Agent.Npc
         /// <summary>观测原点。默认物体位置，高个子角色可覆盖到胸口高度</summary>
         public virtual Vector3 ObservedPosition => transform.position;
 
-        /// <summary>同列表内稳定排序用。NPC 之间按距离排，不按它，留默认值</summary>
-        public virtual int Order => 0;
-
         /// <summary>别人看我与我看自己共用一份文案，避免两处各写一版而漂移</summary>
         public string ObservableState => includeSnapshot ? RenderSelfState() : string.Empty;
 
