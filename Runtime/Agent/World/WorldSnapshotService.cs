@@ -8,6 +8,7 @@
 */
 
 using System.Collections.Generic;
+using Cysharp.Text;
 using UnityEngine;
 
 namespace LLM.Runtime.Agent.World
@@ -26,6 +27,11 @@ namespace LLM.Runtime.Agent.World
         private static long observedRevision;
         private static long loreRevision;
         private static long factRevision;
+
+        // 静态段的整段缓存。-1 是"尚未渲染"的哨兵值：revision 从 0 起自增，
+        // 用 0 当初始值会让"空表且未渲染"与"缓存命中"两种状态无法区分
+        private static string loreText;
+        private static long loreTextRevision = -1;
         #endregion
 
         #region - 属性 -
@@ -49,10 +55,48 @@ namespace LLM.Runtime.Agent.World
             lore.Clear();
             facts.Clear();
             observedRevision = loreRevision = factRevision = 0;
+            loreText = null;
+            loreTextRevision = -1;
         }
         #endregion
 
         #region - 公开接口 -
+        /// <summary>
+        /// 世界静态段。整段缓存：注册列表没变就直接返回同一个 string 引用，
+        /// 这样它留在 system 消息的稳定前缀里，provider 缓存才能命中。
+        /// </summary>
+        /// <returns>各贡献者文本按 Order 拼接的结果；无内容时为空串</returns>
+        public static string RenderLore()
+        {
+            if (loreText is not null && loreTextRevision == loreRevision)
+                return loreText;
+
+            if (lore.Count == 0)
+            {
+                loreText = "";
+                loreTextRevision = loreRevision;
+                return loreText;
+            }
+
+            // 排的是副本：List.Sort 原地改顺序，直接排 lore 会把"注册顺序"这个事实破坏掉
+            var ordered = new List<IWorldLoreContributor>(lore);
+            ordered.Sort(CompareLoreByOrder);
+            using var sb = ZString.CreateStringBuilder();
+
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var text = ordered[i].RenderLore();
+                if (string.IsNullOrEmpty(text)) continue;
+
+                if (sb.Length > 0) sb.Append("\n");
+                sb.Append(text);
+            }
+
+            loreText = sb.ToString();
+            loreTextRevision = loreRevision;
+            return loreText;
+        }
+
         public static void Register(IWorldObservable item)
         {
             if (item == null || Contains(observed, item)) return;
@@ -94,6 +138,16 @@ namespace LLM.Runtime.Agent.World
         #endregion
 
         #region - 私有方法 -
+        private static int CompareLoreByOrder(IWorldLoreContributor a, IWorldLoreContributor b)
+        {
+            int byOrder = a.Order.CompareTo(b.Order);
+            if (byOrder != 0) return byOrder;
+
+            // Order 相同再按类型名兜底：同一份注册表在任何 Awake 先后顺序下都输出同一串文本，
+            // 否则静态段逐字节不变的前提就没了，稳定前缀白搭
+            return string.CompareOrdinal(a.GetType().Name, b.GetType().Name);
+        }
+
         private static bool Contains<T>(List<T> list, T item)
         {
             for (int i = 0; i < list.Count; i++)
