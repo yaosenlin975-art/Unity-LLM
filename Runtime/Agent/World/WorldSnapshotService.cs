@@ -66,7 +66,7 @@ namespace LLM.Runtime.Agent.World
         /// 这样它留在 system 消息的稳定前缀里，provider 缓存才能命中。
         /// 重算的唯一触发是注册列表变化（loreRevision）——贡献者自己改了文本不算。
         /// </summary>
-        /// <returns>各贡献者文本按 Order 拼接的结果，空文本跳过；无内容时为空串</returns>
+        /// <returns>各贡献者文本按 Order → 类型名 → 渲染文本排序后拼接，空文本跳过；无内容时为空串</returns>
         public static string RenderLore()
         {
             if (loreText is not null && loreTextRevision == loreRevision)
@@ -79,18 +79,27 @@ namespace LLM.Runtime.Agent.World
                 return loreText;
             }
 
-            // 排的是副本：List.Sort 原地改顺序，直接排 lore 会把"注册顺序"这个事实破坏掉
-            var ordered = new List<IWorldLoreContributor>(lore);
-            ordered.Sort(CompareLoreByOrder);
-            using var sb = ZString.CreateStringBuilder();
-
-            for (int i = 0; i < ordered.Count; i++)
+            // 先渲染后排序：排序键的最后一档是渲染出来的文本本身，只能先把文本取出来。
+            // 只在未命中路径上做，每个贡献者这一轮仍只被问一次（Calls 语义不变）
+            var segments = new List<LoreSegment>(lore.Count);
+            for (int i = 0; i < lore.Count; i++)
             {
-                var text = ordered[i].RenderLore();
+                var contributor = lore[i];
+                var text = contributor.RenderLore();
                 if (string.IsNullOrEmpty(text)) continue;
 
+                segments.Add(new LoreSegment(contributor.Order, contributor.GetType().Name, text));
+            }
+
+            // 排的是这份片段列表，不是 lore 本身：List.Sort 原地改顺序，
+            // 直接排 lore 会把"注册顺序"这个事实破坏掉
+            segments.Sort(CompareLoreSegment);
+
+            using var sb = ZString.CreateStringBuilder();
+            for (int i = 0; i < segments.Count; i++)
+            {
                 if (sb.Length > 0) sb.Append("\n");
-                sb.Append(text);
+                sb.Append(segments[i].Text);
             }
 
             loreText = sb.ToString();
@@ -139,14 +148,22 @@ namespace LLM.Runtime.Agent.World
         #endregion
 
         #region - 私有方法 -
-        private static int CompareLoreByOrder(IWorldLoreContributor a, IWorldLoreContributor b)
+        /// <summary>
+        /// 静态段的排序比较：Order → 类型名 → 渲染文本的 ordinal。
+        /// 前两档只到"类型"粒度，同一类型注册多个实例且 Order 相同时两键全等，
+        /// 排序会退化成注册顺序（= Awake 先后），静态段就不再逐字节稳定，
+        /// 整段缓存与 provider 前缀命中的前提直接落空。最后一档用文本兜死：
+        /// 三键全等意味着文本也相同，此时怎么排都输出同一串字节。
+        /// </summary>
+        private static int CompareLoreSegment(LoreSegment a, LoreSegment b)
         {
             int byOrder = a.Order.CompareTo(b.Order);
             if (byOrder != 0) return byOrder;
 
-            // Order 相同再按类型名兜底：同一份注册表在任何 Awake 先后顺序下都输出同一串文本，
-            // 否则静态段逐字节不变的前提就没了，稳定前缀白搭
-            return string.CompareOrdinal(a.GetType().Name, b.GetType().Name);
+            int byType = string.CompareOrdinal(a.TypeKey, b.TypeKey);
+            if (byType != 0) return byType;
+
+            return string.CompareOrdinal(a.Text, b.Text);
         }
 
         private static bool Contains<T>(List<T> list, T item)
@@ -166,6 +183,27 @@ namespace LLM.Runtime.Agent.World
             }
 
             return false;
+        }
+        #endregion
+
+        #region - 嵌套类型 -
+        /// <summary>
+        /// 静态段的一个片段：排序要用的两把键 + 渲染好的文本。
+        /// 只有缓存未命中时才构造，重算结束随局部列表一起丢掉；
+        /// 做成 struct 是为了不在"注册表变化"这条路上多扔一堆堆上对象
+        /// </summary>
+        private struct LoreSegment
+        {
+            public readonly int Order;
+            public readonly string TypeKey;
+            public readonly string Text;
+
+            public LoreSegment(int order, string typeKey, string text)
+            {
+                Order = order;
+                TypeKey = typeKey;
+                Text = text;
+            }
         }
         #endregion
     }
