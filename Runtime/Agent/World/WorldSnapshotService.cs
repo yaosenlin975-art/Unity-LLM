@@ -28,8 +28,8 @@ namespace LLM.Runtime.Agent.World
         private static long loreRevision;
         private static long factRevision;
 
-        // 静态段的整段缓存。-1 是"尚未渲染"的哨兵值：revision 从 0 起自增，
-        // 用 0 当初始值会让"空表且未渲染"与"缓存命中"两种状态无法区分
+        // 静态段的整段缓存。-1 表示"从未渲染过"，与 revision 的取值域（0 起自增）不重叠，
+        // 于是"引用非空 + revision 相等"两道判定任一不成立就必然走重算
         private static string loreText;
         private static long loreTextRevision = -1;
         #endregion
@@ -64,8 +64,9 @@ namespace LLM.Runtime.Agent.World
         /// <summary>
         /// 世界静态段。整段缓存：注册列表没变就直接返回同一个 string 引用，
         /// 这样它留在 system 消息的稳定前缀里，provider 缓存才能命中。
+        /// 重算的唯一触发是注册列表变化（loreRevision）——贡献者自己改了文本不算。
         /// </summary>
-        /// <returns>各贡献者文本按 Order 拼接的结果；无内容时为空串</returns>
+        /// <returns>各贡献者文本按 Order 拼接的结果，空文本跳过；无内容时为空串</returns>
         public static string RenderLore()
         {
             if (loreText is not null && loreTextRevision == loreRevision)
