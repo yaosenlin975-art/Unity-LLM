@@ -87,11 +87,14 @@ namespace LLM.Runtime
         /// <summary>
         /// 发起一轮问答。传入 onChunkCallback 走流式，每个增量回调一次；
         /// 工具往返轮次里的文本同样累积，最终作为完整回答返回并写入历史。
+        /// stableContext 是内容不变的注入段（世界/个体设定），单占一位排在 ephemeralContext
+        /// 之前：两段合成一块，动态内容会把静态内容一起挤出 provider 的前缀缓存。
         /// writeHistory=false 时不落历史——内核要在确认代际之后自己决定写不写。
         /// ADR-023：无工具往返次数总闸；防循环见 LoopGuard NameCap/L2，成本见墙钟。
         /// </summary>
         public async UniTask<string> AskAsync(string userText,
             Action<LLMStreamChunk> onChunkCallback = null,
+            string stableContext = null,
             string ephemeralContext = null,
             bool writeHistory = true,
             CancellationToken ct = default)
@@ -109,7 +112,7 @@ namespace LLM.Runtime
                 var messages = contextManager.GetHistoryMessages();
                 messages.Add(new LLMMessage("user", userText ?? ""));
 
-                string answer = await RunToolLoopAsync(messages, ephemeralContext, ct);
+                string answer = await RunToolLoopAsync(messages, stableContext, ephemeralContext, ct);
                 if (writeHistory)
                     contextManager.AddRound(userText, answer);
                 return answer;
@@ -122,11 +125,11 @@ namespace LLM.Runtime
         }
 
         private async UniTask<string> RunToolLoopAsync(
-            List<LLMMessage> messages, string ephemeralContext, CancellationToken ct)
+            List<LLMMessage> messages, string stableContext, string ephemeralContext, CancellationToken ct)
         {
             for (;;)
             {
-                var toolCalls = await SendRoundAsync(messages, ephemeralContext, ct);
+                var toolCalls = await SendRoundAsync(messages, stableContext, ephemeralContext, ct);
                 if (toolCalls.Count == 0)
                     return answerBuilder.ToString();
 
@@ -137,10 +140,10 @@ namespace LLM.Runtime
 
         /// <summary>发一轮请求，返回已拼接完整的工具调用；为空表示模型已直接作答</summary>
         private async UniTask<List<LLMToolCall>> SendRoundAsync(
-            List<LLMMessage> messages, string ephemeralContext, CancellationToken ct)
+            List<LLMMessage> messages, string stableContext, string ephemeralContext, CancellationToken ct)
         {
             assembler.Reset();
-            var request = BuildRequest(messages, ephemeralContext);
+            var request = BuildRequest(messages, stableContext, ephemeralContext);
             var dispatcher = LLMDispatcher.GetInstance();
 
             if (onChunk == null)
@@ -178,7 +181,7 @@ namespace LLM.Runtime
                 onChunk?.Invoke(chunk);
         }
 
-        private LLMRequest BuildRequest(List<LLMMessage> messages, string ephemeralContext)
+        private LLMRequest BuildRequest(List<LLMMessage> messages, string stableContext, string ephemeralContext)
         {
             var request = new LLMRequest
             {
@@ -192,8 +195,9 @@ namespace LLM.Runtime
             for (int i = 0; i < contextBlocks.Count; i++)
                 request.AddContextBlock(contextBlocks[i]);
 
-            if (!string.IsNullOrEmpty(ephemeralContext))
-                request.AddContextBlock(ephemeralContext);
+            // 静态段先入：它内容不变，留在稳定前缀里；动态段垫底，变化点被推到最末尾
+            request.AddContextBlock(stableContext);
+            request.AddContextBlock(ephemeralContext);
 
             if (EnableTools)
             {
