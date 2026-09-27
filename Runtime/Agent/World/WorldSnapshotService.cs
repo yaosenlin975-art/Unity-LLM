@@ -26,7 +26,6 @@ namespace LLM.Runtime.Agent.World
 
         private static long observedRevision;
         private static long loreRevision;
-        private static long factRevision;
 
         // 静态段的整段缓存。-1 表示"从未渲染过"，与 revision 的取值域（0 起自增）不重叠，
         // 于是"引用非空 + revision 相等"两道判定任一不成立就必然走重算
@@ -42,13 +41,10 @@ namespace LLM.Runtime.Agent.World
 
         #region - 属性 -
         public static int ObservableCount => observed.Count;
-        public static int LoreCount => lore.Count;
-        public static int FactCount => facts.Count;
 
         /// <summary>注册列表每变一次自增。缓存段靠比对它决定要不要重算</summary>
         public static long ObservedRevision => observedRevision;
         public static long LoreRevision => loreRevision;
-        public static long FactRevision => factRevision;
         #endregion
 
         #region - 生命周期 -
@@ -60,7 +56,7 @@ namespace LLM.Runtime.Agent.World
             observed.Clear();
             lore.Clear();
             facts.Clear();
-            observedRevision = loreRevision = factRevision = 0;
+            observedRevision = loreRevision = 0;
             loreText = null;
             loreTextRevision = -1;
         }
@@ -203,17 +199,18 @@ namespace LLM.Runtime.Agent.World
             if (Remove(lore, contributor)) loreRevision++;
         }
 
+        // 事实侧不配 revision：动态段每轮都重问、绝不整段缓存，登记变化下一轮自然体现
+        // （与 NpcAgentHost.RegisterState 同一条理由）
         public static void Register(IWorldFactContributor contributor)
         {
             if (contributor == null || Contains(facts, contributor)) return;
             facts.Add(contributor);
-            factRevision++;
         }
 
         public static void Unregister(IWorldFactContributor contributor)
         {
             if (contributor == null) return;
-            if (Remove(facts, contributor)) factRevision++;
+            Remove(facts, contributor);
         }
         #endregion
 
