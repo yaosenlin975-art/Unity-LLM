@@ -46,7 +46,7 @@ namespace LLM.Editor
         private static readonly GUIContent k_observedLabelLabel = new("观测名",
             "别人把你列进「在场者」时给模型看的名字，留空则用物体名。物体名常是 \"Player (1)\" 这种，模型会原样复述");
         private static readonly GUIContent k_includeSnapshotLabel = new("注入世界/个体快照",
-            "总开关。关掉后四段快照整体不注入，只留好感度与本资产上手填的「核心快照」兜底");
+            "总开关。关掉后四段快照整体不注入，只留好感度与 Inspector 上手填的「核心快照」兜底");
         private static readonly GUIContent k_observeRadiusLabel = new("在场者半径（米）",
             "世界动态段里「在场者」的查询半径，按本物体的观测原点算距离。填 0 = 不列在场者");
         private static readonly GUIContent k_observeMaxPeersLabel = new("在场者最多列几个",
@@ -105,7 +105,7 @@ namespace LLM.Editor
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("世界/个体快照", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "打开后每轮注入四段：世界设定 + 你的能力（静态段，内容不变才进得了 provider 的前缀缓存）‖ 世界现状 + 你的状态（动态段，每轮现问）。\n静态段只在贡献者注册列表变化时重算，所以注册过自己的贡献者被销毁时必须配对注销，否则旧文本会一直留在快照里。\n在场者由本物体的观测原点现算，永远排除自己。",
+                "打开后每轮注入四段：世界设定 + 你的能力（静态段，内容不变才进得了 provider 的前缀缓存）‖ 世界现状 + 你的状态（动态段，每轮现问）。\n关掉后四段整体消失，只剩好感度与手填的「核心快照」；注意它同时也会让本物体对别人报出的自我状态变空——在场者列表里那一行「|正在做什么」没有了。\n静态段只在贡献者注册列表变化时重算，所以注册过自己的贡献者被销毁时必须配对注销，否则旧文本会一直留在快照里。\n在场者由本物体的观测原点现算，永远排除自己。",
                 MessageType.None);
 
             EditorGUILayout.PropertyField(includeSnapshot, k_includeSnapshotLabel);

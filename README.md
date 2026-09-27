@@ -332,7 +332,7 @@ public interface IWorldObservable
 - system 块序：`人设 → contextBlocks → 世界静态 → 个体静态 ‖ 世界动态 → 个体动态`。稳定前缀到此为止，变化点全部推到末尾，provider 的前缀缓存才可能命中（请求日志的缓存命中列可以直接验）。
 - 在场者属世界动态，但**按请求者现算**：`WorldSnapshotService.RenderFacts(origin, except, radius, maxPeers)` 排掉的正是请求者自己，所以 NPC 不会把自己念进"你身边有谁"；超出名额折叠成"另有 K 个未列出"而不是静默丢掉。
 - 个体侧不进全局表：A 的 `OnEnable` 只该作废 A 自己的静态段。并进全局表等于全场 NPC 互相打作废，稳定前缀再也命中不了。
-- `NpcAgentHost` Inspector 的「世界/个体快照」节有总开关与在场者的半径/名额；关掉总开关后只剩好感度与 `SetCoreSnapshot` 的手填兜底。
+- `NpcAgentHost` Inspector 的「世界/个体快照」节有总开关与在场者的半径/名额；关掉总开关后只剩好感度与 `SetCoreSnapshot` 的手填兜底。这个开关同时管两件事：既关"我注入什么"，也关"我对别人报的自我状态"（关掉后别人列在场者时仍有我的观测名，但那行 `|自我状态` 为空）。
 
 **贡献者的配对注销是义务，不是建议。** 静态段只在"注册列表变化"时重算——贡献者被销毁却没 `Unregister` 时，它上一轮渲染的文本会一直留在快照里，直到下一次有人注册或注销。渲染遍历时的判活（`contributor is UnityEngine.Object u && u == null` 则跳过）只保证**不抛异常**，不保证**文本新鲜**，两件事别混。绑在启用态上的注册（`IWorldObservable` 走 `OnEnable/OnDisable`）不用调用方管；但往 `NpcAgentHost` 上登记的个体贡献者，谁登记谁就得自己写那一行注销。
 
