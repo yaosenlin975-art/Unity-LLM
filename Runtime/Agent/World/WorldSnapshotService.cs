@@ -2,8 +2,10 @@
 ┌────────────────────────────┐
 │　Description: 世界侧快照聚合单例
 │　Remark: static 即单例——注册早于任何场景组件的
-│　　　　　 Awake，做成 MonoSingleton 会丢注册
-│　ClassName: WorldSnapshotService
+│　　　　　 Awake，做成 MonoSingleton 会丢注册。
+│　　　　　 快照片段与三档比较器（SnapshotSegment）
+│　　　　　 同文件：世界与个体四处共用，别拆出去各写一份
+│　ClassName: WorldSnapshotService / SnapshotSegment
 └────────────────────────────┘
 */
 
@@ -81,21 +83,21 @@ namespace LLM.Runtime.Agent.World
                 return loreText;
             }
 
-            // 先渲染后排序：排序键的最后一档是渲染出来的文本本身，只能先把文本取出来。
-            // 只在未命中路径上做，每个贡献者这一轮仍只被问一次（Calls 语义不变）
-            var segments = new List<LoreSegment>(lore.Count);
+            // 先渲染后排序：末档键就是渲染出来的文本本身，只能先把文本取出来（键为什么是三档见
+            // SnapshotSegment.Compare）。只在未命中路径上做，每个贡献者这一轮仍只被问一次（Calls 语义不变）
+            var segments = new List<SnapshotSegment>(lore.Count);
             for (int i = 0; i < lore.Count; i++)
             {
                 var contributor = lore[i];
                 var text = contributor.RenderLore();
                 if (string.IsNullOrEmpty(text)) continue;
 
-                segments.Add(new LoreSegment(contributor.Order, contributor.GetType().Name, text));
+                segments.Add(new SnapshotSegment(contributor.Order, contributor.GetType().Name, text));
             }
 
             // 排的是这份片段列表，不是 lore 本身：List.Sort 原地改顺序，
             // 直接排 lore 会把"注册顺序"这个事实破坏掉
-            segments.Sort(CompareLoreSegment);
+            segments.Sort(SnapshotSegment.Compare);
 
             using var sb = ZString.CreateStringBuilder();
             for (int i = 0; i < segments.Count; i++)
@@ -126,10 +128,10 @@ namespace LLM.Runtime.Agent.World
 
             if (facts.Count > 0)
             {
-                // 先渲染后排序（同 RenderLore 的三档键）：末档键就是渲染出来的文本，
-                // 只能先把文本取出来。这里不整段缓存，但顺序仍要确定——
+                // 先渲染后排序（键与片段类型都和世界静态段共用，见 SnapshotSegment.Compare）：
+                // 这里不整段缓存，但顺序仍要确定——
                 // 排序退化成注册顺序的话，动态段会在没有任何事实变化时白白抖动
-                var segments = new List<FactSegment>(facts.Count);
+                var segments = new List<SnapshotSegment>(facts.Count);
                 for (int i = 0; i < facts.Count; i++)
                 {
                     var contributor = facts[i];
@@ -146,11 +148,11 @@ namespace LLM.Runtime.Agent.World
                     var text = contributor.RenderFact();
                     if (string.IsNullOrEmpty(text)) continue;
 
-                    segments.Add(new FactSegment(contributor.Order, contributor.GetType().Name, text));
+                    segments.Add(new SnapshotSegment(contributor.Order, contributor.GetType().Name, text));
                 }
 
                 // 排的是片段副本，facts 本身保持注册顺序
-                segments.Sort(CompareFactSegment);
+                segments.Sort(SnapshotSegment.Compare);
 
                 for (int i = 0; i < segments.Count; i++)
                 {
@@ -215,40 +217,6 @@ namespace LLM.Runtime.Agent.World
         #endregion
 
         #region - 私有方法 -
-        /// <summary>
-        /// 静态段的排序比较：Order → 类型名 → 渲染文本的 ordinal。
-        /// 前两档只到"类型"粒度，同一类型注册多个实例且 Order 相同时两键全等，
-        /// 排序会退化成注册顺序（= Awake 先后），静态段就不再逐字节稳定，
-        /// 整段缓存与 provider 前缀命中的前提直接落空。最后一档用文本兜死：
-        /// 三键全等意味着文本也相同，此时怎么排都输出同一串字节。
-        /// </summary>
-        private static int CompareLoreSegment(LoreSegment a, LoreSegment b)
-        {
-            int byOrder = a.Order.CompareTo(b.Order);
-            if (byOrder != 0) return byOrder;
-
-            int byType = string.CompareOrdinal(a.TypeKey, b.TypeKey);
-            if (byType != 0) return byType;
-
-            return string.CompareOrdinal(a.Text, b.Text);
-        }
-
-        /// <summary>
-        /// 全局事实段的排序比较：Order → 类型名 → 渲染文本的 ordinal，与 CompareLoreSegment 同构。
-        /// 前两档只到"类型"粒度，同类型多实例且 Order 相同时两键全等，
-        /// 排序会退化成注册顺序（= 注册先后），动态段文本在没有事实变化时也抖动
-        /// </summary>
-        private static int CompareFactSegment(FactSegment a, FactSegment b)
-        {
-            int byOrder = a.Order.CompareTo(b.Order);
-            if (byOrder != 0) return byOrder;
-
-            int byType = string.CompareOrdinal(a.TypeKey, b.TypeKey);
-            if (byType != 0) return byType;
-
-            return string.CompareOrdinal(a.Text, b.Text);
-        }
-
         /// <summary>
         /// 收拢半径内的在场者：判活 → 排除请求者 → 半径过滤 → 三档排序 → 截断。
         /// 结果写进复用表 peerScratch 返回，调用方只读不回存
@@ -366,25 +334,6 @@ namespace LLM.Runtime.Agent.World
 
         #region - 嵌套类型 -
         /// <summary>
-        /// 静态段的一个片段：排序要用的两把键 + 渲染好的文本。
-        /// 只有缓存未命中时才构造，重算结束随局部列表一起丢掉；
-        /// 做成 struct 是为了不在"注册表变化"这条路上多扔一堆堆上对象
-        /// </summary>
-        private struct LoreSegment
-        {
-            public readonly int Order;
-            public readonly string TypeKey;
-            public readonly string Text;
-
-            public LoreSegment(int order, string typeKey, string text)
-            {
-                Order = order;
-                TypeKey = typeKey;
-                Text = text;
-            }
-        }
-
-        /// <summary>
         /// 在场者的一条渲染素材：名字、到请求者的距离（米）、自我状态。
         /// 三档排序键全在这里，渲染文本本身不作字段——行文本由 BuildPeersText 现拼。
         /// 只在 CollectPeers→BuildPeersText 之间存活，随复用表跨轮清空重用
@@ -395,24 +344,48 @@ namespace LLM.Runtime.Agent.World
             public float Distance;
             public string State;
         }
+        #endregion
+    }
+
+    /// <summary>
+    /// 快照片段：渲染好的一段文本 + 它的两把排序键。
+    /// 世界静态段、世界动态段的全局事实、个体静态段（能力清单）、个体动态段（状态清单）
+    /// 四处收的是同一样东西，所以只用一个类型：同一条稳定不变量（R9）在四处是同一个实现，
+    /// 改一处就四处一起改，不会静默分叉。
+    /// 只在缓存未命中/每轮重算时构造，随局部列表一起丢掉；
+    /// 做成 struct 是为了不在"注册表变化"这条冷路上多扔一堆堆上对象
+    /// </summary>
+    internal struct SnapshotSegment
+    {
+        public readonly int Order;
+        public readonly string TypeKey;
+        public readonly string Text;
+
+        public SnapshotSegment(int order, string typeKey, string text)
+        {
+            Order = order;
+            TypeKey = typeKey;
+            Text = text;
+        }
 
         /// <summary>
-        /// 全局事实的一个片段：排序两把键 + 渲染好的文本（形状同 LoreSegment，
-        /// 区别只在动态段每轮都重建、不进任何缓存）
+        /// 快照段的排序比较（世界与个体两侧四个调用点共用这一个）：Order → 类型名 → 渲染文本的 ordinal。
+        /// 为什么要第三档：前两档只到"类型"粒度，同一类型注册多个实例且 Order 相同时两键全等，
+        /// 排序就退化成注册顺序（= Awake 先后）——静态段不再逐字节稳定，整段缓存与 provider
+        /// 前缀命中的前提直接落空；让贡献者自己保证 Order 不同，是把静默陷阱推给未来所有人。
+        /// 动态段虽然没有缓存可保护，同样要确定性：顺序抖一下就会在事实没变时多出几个假差异字节。
+        /// 末档用文本兜死：三键全等意味着文本也相同，此时怎么排都输出同一串字节。
+        /// 在场者不在此列——它的键是距离 → 名字 → 状态文本另一套（WorldSnapshotService.ComparePeer）
         /// </summary>
-        private struct FactSegment
+        public static int Compare(SnapshotSegment a, SnapshotSegment b)
         {
-            public readonly int Order;
-            public readonly string TypeKey;
-            public readonly string Text;
+            int byOrder = a.Order.CompareTo(b.Order);
+            if (byOrder != 0) return byOrder;
 
-            public FactSegment(int order, string typeKey, string text)
-            {
-                Order = order;
-                TypeKey = typeKey;
-                Text = text;
-            }
+            int byType = string.CompareOrdinal(a.TypeKey, b.TypeKey);
+            if (byType != 0) return byType;
+
+            return string.CompareOrdinal(a.Text, b.Text);
         }
-        #endregion
     }
 }

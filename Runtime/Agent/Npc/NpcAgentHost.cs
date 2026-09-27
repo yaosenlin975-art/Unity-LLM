@@ -178,7 +178,7 @@ namespace LLM.Runtime.Agent.Npc
                 return profileText;
             }
 
-            var segments = new List<SelfSegment>(profiles.Count);
+            var segments = new List<SnapshotSegment>(profiles.Count);
             for (int i = 0; i < profiles.Count; i++)
             {
                 var contributor = profiles[i];
@@ -187,12 +187,12 @@ namespace LLM.Runtime.Agent.Npc
                 var text = contributor.RenderProfile();
                 if (string.IsNullOrEmpty(text)) continue;
 
-                segments.Add(new SelfSegment(contributor.Order, contributor.GetType().Name, text));
+                segments.Add(new SnapshotSegment(contributor.Order, contributor.GetType().Name, text));
             }
 
-            // 先渲染后排序（与 WorldSnapshotService.RenderLore 同形）：第三档键就是渲染出来的文本，
-            // 只能先把文本取出来。只在未命中路径上做，每个贡献者这一轮仍只被问一次
-            segments.Sort(CompareSelfSegment);
+            // 先渲染后排序（片段与比较器都和世界侧共用，见 SnapshotSegment.Compare）：
+            // 只在未命中路径上做，每个贡献者这一轮仍只被问一次
+            segments.Sort(SnapshotSegment.Compare);
 
             profileText = JoinSegments(segments);
             profileTextRevision = profileRevision;
@@ -207,7 +207,7 @@ namespace LLM.Runtime.Agent.Npc
         {
             if (states.Count == 0) return string.Empty;
 
-            var segments = new List<SelfSegment>(states.Count);
+            var segments = new List<SnapshotSegment>(states.Count);
             for (int i = 0; i < states.Count; i++)
             {
                 var contributor = states[i];
@@ -216,12 +216,12 @@ namespace LLM.Runtime.Agent.Npc
                 var text = contributor.RenderState();
                 if (string.IsNullOrEmpty(text)) continue;
 
-                segments.Add(new SelfSegment(contributor.Order, contributor.GetType().Name, text));
+                segments.Add(new SnapshotSegment(contributor.Order, contributor.GetType().Name, text));
             }
 
-            // 排序键与静态段同构。动态段没有缓存可保护，但顺序抖一下就会让"这轮快照变了"
+            // 排序键与静态段是同一个比较器。动态段没有缓存可保护，但顺序抖一下就会让"这轮快照变了"
             // 这件事多带上几个字节的假差异，前缀与压缩判断都会被它白顶一次
-            segments.Sort(CompareSelfSegment);
+            segments.Sort(SnapshotSegment.Compare);
 
             return JoinSegments(segments);
         }
@@ -270,7 +270,7 @@ namespace LLM.Runtime.Agent.Npc
             return ZString.Concat(head, "\n", tail);
         }
 
-        private static string JoinSegments(List<SelfSegment> segments)
+        private static string JoinSegments(List<SnapshotSegment> segments)
         {
             using var sb = ZString.CreateStringBuilder();
             for (int i = 0; i < segments.Count; i++)
@@ -280,23 +280,6 @@ namespace LLM.Runtime.Agent.Npc
             }
 
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// 个体段排序：Order → 类型名 → 渲染文本的 ordinal，与世界的 CompareLoreSegment 同构。
-        /// 前两档只到"类型"粒度：同一类型注册多个实例且 Order 相同时两键全等，排序就退化成
-        /// 注册顺序（= 子组件 Awake 先后），个体静态段不再逐字节稳定，整段缓存与前缀命中的前提直接落空。
-        /// 末档用文本兜死：三键全等意味着文本也相同，此时怎么排都输出同一串字节
-        /// </summary>
-        private static int CompareSelfSegment(SelfSegment a, SelfSegment b)
-        {
-            int byOrder = a.Order.CompareTo(b.Order);
-            if (byOrder != 0) return byOrder;
-
-            int byType = string.CompareOrdinal(a.TypeKey, b.TypeKey);
-            if (byType != 0) return byType;
-
-            return string.CompareOrdinal(a.Text, b.Text);
         }
 
         /// <summary>
@@ -332,29 +315,6 @@ namespace LLM.Runtime.Agent.Npc
             }
 
             return false;
-        }
-
-        #endregion
-
-        #region - 嵌套类型 -
-
-        /// <summary>
-        /// 个体段的一个片段：两把排序键 + 渲染好的文本（形状同世界的 LoreSegment）。
-        /// 能力清单与状态清单共用一个类型——两者的片段结构一样，区别只在问的频率。
-        /// 做成 struct：注册列表变化是冷路径，不该为它往堆上扔一批小对象
-        /// </summary>
-        private struct SelfSegment
-        {
-            public readonly int Order;
-            public readonly string TypeKey;
-            public readonly string Text;
-
-            public SelfSegment(int order, string typeKey, string text)
-            {
-                Order = order;
-                TypeKey = typeKey;
-                Text = text;
-            }
         }
 
         #endregion
