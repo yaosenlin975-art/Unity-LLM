@@ -349,7 +349,7 @@ public async UniTask<string> AskAsync(string userText,
 
 包外若有按位置传第三个 `string` 的旧调用（旧语义是 `ephemeralContext`），`string → string` 编译器抓不到——**它会照常编译通过，只是那段每轮都变的文本被放进了静态段**：变化点跟着前移，排在它后面的动态段与本轮之后的所有内容都不再命中前缀缓存（前面的人设与长期块仍然照旧命中，所以现象是"缓存收益莫名少了一半"，而不是全崩）。升级时改成命名实参，或自己核对第 3、4 位。生产侧唯一调用点是 `AgentCore`。
 
-`WorldSnapshotService` / `NpcAgentHost` 的取舍与拒绝理由见工程 `docs/adr/ADR-030-world-vs-self-snapshot-cache.md`（不随包分发）。
+`WorldSnapshotService` / `NpcAgentHost` 的取舍与拒绝理由见工程工作区 `docs/adr/ADR-030-world-vs-self-snapshot-cache.md`（**工作区文档，不随包分发，编号与本包 `Docs/decisions/` 序列独立**；本包自己的 ADR-030 是另一篇「状态存储按槽用类型全名配置」）。
 
 ## NPC 表现层（可选）
 

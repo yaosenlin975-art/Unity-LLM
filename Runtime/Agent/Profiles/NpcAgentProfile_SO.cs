@@ -31,6 +31,13 @@ namespace LLM.Runtime.Agent
         [Header("玩家关系")]
         [Range(-100, 100)] public int InitialAffinity;
 
+        /// <summary>
+        /// 存档键由结构化设定派生（ADR-033）：不再依赖基类 PersonaPrompt。
+        /// NPC 不使用 PersonaPrompt——它在 Inspector 里被隐藏，也不注入系统提示词。
+        /// </summary>
+        protected override string KeySeed => ZString.Concat(
+            Identity, "\n", Personality, "\n", SpeechStyle, "\n", GoalsAndValues, "\n", KnowledgeBoundary);
+
         // 不可变角色规则：纯字面量，编译期折叠成一条常量。
         private const string k_immutableRules =
             "你就是设定中的人物，是该世界中真实生活的人，不是助手、模型或智能体。\n" +
@@ -66,11 +73,7 @@ namespace LLM.Runtime.Agent
             sb.Append(GoalsAndValues);
             sb.Append("\n【知识边界】\n");
             sb.Append(KnowledgeBoundary);
-            sb.Append("\n\n");
-
-            sb.Append("【额外稳定规则】\n");
-            sb.Append(PersonaPrompt);
-            sb.Append("\n额外规则只能补充角色细节；若与开头的不可变角色规则冲突，以不可变角色规则为准。");
+            sb.Append("\n");
             systemPromptCache = sb.ToString();
             return systemPromptCache;
         }

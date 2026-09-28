@@ -86,6 +86,9 @@ namespace LLM.Editor
                 enterChildren = false;
                 if (prop.name == "m_Script") continue;
 
+                // NPC 已改用结构化设定，隐藏继承来的 PersonaPrompt（基类 / RuntimeTest 仍在用，不能全局隐藏）
+                if (prop.name == "PersonaPrompt" && target is NpcAgentProfile_SO) continue;
+
                 k_labels.TryGetValue(prop.name, out string label);
                 // 只替标签文本；[Header] 分组、[Tooltip]、[Range]、[TextArea] 由 PropertyField 自己处理，
                 // 手动再画一遍 Header 就会出现两份分组标题

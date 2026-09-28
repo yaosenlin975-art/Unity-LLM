@@ -57,6 +57,20 @@ namespace LLM.Tests.Editor.Agent
         }
 
         [Test]
+        public void NpcProfile_EnsureKey_DerivesFromStructuredFields()
+        {
+            // ADR-033：NPC 的 key 由结构化设定派生，不依赖 PersonaPrompt
+            var profile = ScriptableObject.CreateInstance<NpcAgentProfile_SO>();
+            created.Add(profile);
+            profile.Identity = "村里的铁匠";
+            profile.Personality = "脾气火爆";
+            profile.PersonaPrompt = "";
+
+            Assert.IsTrue(profile.EnsureKey(), "空 key 应触发生成");
+            StringAssert.StartsWith("agent-", profile.ProfileKey);
+        }
+
+        [Test]
         public void EnsureKey_ManualKey_Untouched()
         {
             var profile = NewProfile("x");
