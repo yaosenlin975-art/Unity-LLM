@@ -119,14 +119,16 @@ namespace LLM.Runtime
         /// <summary>导出可直接送 Provider 的历史消息（不含 system）</summary>
         public List<LLMMessage> GetHistoryMessages()
         {
+            // 整段重建都在 lock(rounds) 内：cachedHistory 是共享可变缓存，
+            // 锁外 Clear/Add 会让并发 GetHistoryMessages 互相踩；锁外写 historyDirty=false
+            // 还会抹掉别的线程刚通过 AddRound 置上的脏标记，导致漏更。
+            // GetActiveRounds* 内部再 lock(rounds) 是可重入的，不会死锁。
             lock (rounds)
             {
                 if (!historyDirty && cachedHistory != null)
                     return new List<LLMMessage>(cachedHistory);
-            }
 
-            var activeRounds = GetActiveRounds();
-            {
+                var activeRounds = GetActiveRounds();
                 cachedHistory ??= new List<LLMMessage>();
                 cachedHistory.Clear();
 
@@ -151,11 +153,7 @@ namespace LLM.Runtime
                         cachedHistory.Add(new LLMMessage("assistant", round.AssistantMessage) { Timestamp = timestamp });
                 }
 
-                lock (rounds)
-                {
-                    historyDirty = false;
-                }
-
+                historyDirty = false;
                 return new List<LLMMessage>(cachedHistory);
             }
         }

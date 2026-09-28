@@ -11,8 +11,11 @@ namespace LLM.Runtime
     [CreateAssetMenu(fileName = "LLM Provider Config", menuName = "LLM/Provider Config")]
     public class LLMProviderConfig_SO : LLMProviderConfigBase_SO
     {
+        /// <summary>编辑器本地覆盖的 EditorPrefs 键。本地覆盖不进版本库，避免密钥写进 .asset</summary>
+        public const string k_editorPrefsApiKey = "Unity-LLM.ApiKey";
+
         [Header("连接配置")]
-        [Tooltip("LLM API Key，留空时尝试读取环境变量 LLM_API_KEY")]
+        [Tooltip("【不安全】直接写入会明文保存进 .asset 并可能进版本库。推荐顺序：编辑器本地覆盖（SetLocalApiKey）→ 环境变量 LLM_API_KEY → 这里。留空则回退后两者")]
         [SerializeField] private string apiKey = "";
 
         [Tooltip("模型名称")]
@@ -27,15 +30,35 @@ namespace LLM.Runtime
         protected override string DefaultProviderName => "openai";
 
         /// <summary>
-        /// 获取 API Key：优先使用 Inspector 设置值，否则读取环境变量 LLM_API_KEY
+        /// 获取 API Key。优先级：编辑器本地覆盖（不进版本库）→ 环境变量 LLM_API_KEY → 资产字段。
+        /// 资产字段是兼容旧资产的兜底，不是推荐路径。全空时返回 ""，不影响无 key 的本地/测试回退。
         /// </summary>
         public string ApiKey
         {
-            get => string.IsNullOrEmpty(apiKey)
-                ? System.Environment.GetEnvironmentVariable("LLM_API_KEY") ?? ""
-                : apiKey;
+            get
+            {
+#if UNITY_EDITOR
+                string local = UnityEditor.EditorPrefs.GetString(k_editorPrefsApiKey, "");
+                if (!string.IsNullOrEmpty(local)) return local;
+#endif
+                string env = System.Environment.GetEnvironmentVariable("LLM_API_KEY");
+                if (!string.IsNullOrEmpty(env)) return env;
+
+                return apiKey;
+            }
             set => apiKey = value;
         }
+
+#if UNITY_EDITOR
+        /// <summary>写编辑器本地覆盖（不进版本库）。传 null/空串即清除</summary>
+        public static void SetLocalApiKey(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                UnityEditor.EditorPrefs.DeleteKey(k_editorPrefsApiKey);
+            else
+                UnityEditor.EditorPrefs.SetString(k_editorPrefsApiKey, value);
+        }
+#endif
 
         public override ILLMProvider CreateProvider(string name)
         {

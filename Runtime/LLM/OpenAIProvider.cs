@@ -63,7 +63,7 @@ namespace LLM.Runtime
             string body = BuildRequestBody(request, stream: true);
 
             using var webRequest = BuildRequest(body, streaming: true);
-            var sseHandler = new SSEDownloadHandler(onChunk, ParseStreamChunk);
+            var sseHandler = new SSEDownloadHandler(onChunk, ParseStreamChunk, _parseLock);
             webRequest.downloadHandler = sseHandler;
 
             // 流式不设整体 timeout：本地模型（LM Studio 等）一次生成就可能超过 30s，
@@ -329,16 +329,30 @@ namespace LLM.Runtime
         // 复用 List，ParseStreamChunk 只在 ProcessLine 中同步调用
         private readonly List<LLMStreamChunk> _reusableChunkList = new(4);
 
-        /// <summary>缓存 serializer：每条 chunk 都新建一个的话，省的垃圾又还回去了</summary>
-        private static readonly JsonSerializer k_streamSerializer = JsonSerializer.CreateDefault();
+        /// <summary>
+        /// 解析互斥：同一个 Provider 会被多 NPC 并发流式共用，
+        /// _reusableChunkList 与 JsonSerializer 都不是线程安全的，必须串行解析+消费。
+        /// </summary>
+        private readonly object _parseLock = new();
+
+        /// <summary>缓存 serializer：每条 chunk 都新建一个的话，省的垃圾又还回去了。实例级：JsonSerializer 非线程安全</summary>
+        private readonly JsonSerializer _streamSerializer = JsonSerializer.CreateDefault();
 
         private List<LLMStreamChunk> ParseStreamChunk(string data)
+        {
+            lock (_parseLock)
+            {
+                return ParseStreamChunkLocked(data);
+            }
+        }
+
+        private List<LLMStreamChunk> ParseStreamChunkLocked(string data)
         {
             _reusableChunkList.Clear();
 
             ChunkPayload payload;
             using (var reader = new JsonTextReader(new StringReader(data)))
-                payload = k_streamSerializer.Deserialize<ChunkPayload>(reader);
+                payload = _streamSerializer.Deserialize<ChunkPayload>(reader);
 
             var choices = payload?.Choices;
             if (choices == null || choices.Length == 0)
@@ -454,16 +468,19 @@ namespace LLM.Runtime
             private readonly char[] _charBuf = new char[1024];
             private readonly Action<LLMStreamChunk> _onChunk;
             private readonly Func<string, List<LLMStreamChunk>> _parseChunk;
+            private readonly object _parseLock;
             private CancellationTokenSource _idleCts;
             private readonly int _idleTimeoutSeconds;
 
             public SSEDownloadHandler(
                 Action<LLMStreamChunk> onChunk,
                 Func<string, List<LLMStreamChunk>> parseChunk,
+                object parseLock = null,
                 int idleTimeoutSeconds = 60)
             {
                 _onChunk = onChunk;
                 _parseChunk = parseChunk;
+                _parseLock = parseLock;
                 _idleTimeoutSeconds = idleTimeoutSeconds;
                 _idleCts = new CancellationTokenSource();
                 _idleCts.CancelAfter(TimeSpan.FromSeconds(idleTimeoutSeconds));
@@ -563,6 +580,22 @@ namespace LLM.Runtime
                     return;
                 }
 
+                // 解析与消费必须在同一把锁里：ParseStreamChunk 返回的是共享复用 List，
+                // 锁外迭代会被并发流的下一次 Clear/填入踩掉
+                if (_parseLock == null)
+                {
+                    ParseAndDispatch(data);
+                    return;
+                }
+
+                lock (_parseLock)
+                {
+                    ParseAndDispatch(data);
+                }
+            }
+
+            private void ParseAndDispatch(string data)
+            {
                 List<LLMStreamChunk> chunks;
                 try
                 {

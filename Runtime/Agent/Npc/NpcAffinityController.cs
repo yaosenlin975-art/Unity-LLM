@@ -67,8 +67,12 @@ namespace LLM.Runtime.Agent.Npc
             {
                 saved = NpcAffinityState.Deserialize(NpcAffinityStore.Current.Load(stableSessionId));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // 坏档不能静默：没有 sessionId 就没法对齐是哪个 NPC 的存档出了问题
+                Log.Warning(nameof(NpcAffinityController),
+                    ZString.Format("好感存档反序列化失败（sessionId={0}），按未存档处理: {1}",
+                        stableSessionId, ex.Message));
                 saved = null;
             }
 

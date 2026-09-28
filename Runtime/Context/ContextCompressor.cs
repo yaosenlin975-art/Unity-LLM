@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Text;
 using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace LLM.Runtime
 {
@@ -274,10 +275,11 @@ Rules: be terse — bullet points and fragments, not prose. Preserve names, numb
     [Serializable]
     public class ConversationRound
     {
-        public string UserMessage;
-        public string AssistantMessage;
-        public long Timestamp;
-        public bool IsSummary;
-        public bool IsPinned;
+        // JsonProperty 钉死线格式：字段改名不破坏已落盘的历史/归档
+        [JsonProperty("UserMessage")] public string UserMessage;
+        [JsonProperty("AssistantMessage")] public string AssistantMessage;
+        [JsonProperty("Timestamp")] public long Timestamp;
+        [JsonProperty("IsSummary")] public bool IsSummary;
+        [JsonProperty("IsPinned")] public bool IsPinned;
     }
 }

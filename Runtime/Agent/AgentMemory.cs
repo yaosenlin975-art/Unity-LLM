@@ -21,9 +21,10 @@ namespace LLM.Runtime.Agent
     [Serializable]
     public class AgentFact
     {
-        public string Key;
-        public string Value;
-        public long Timestamp;
+        // JsonProperty 钉死线格式：字段改名不破坏已落盘的事实档
+        [JsonProperty("Key")] public string Key;
+        [JsonProperty("Value")] public string Value;
+        [JsonProperty("Timestamp")] public long Timestamp;
     }
 
     /// <summary>

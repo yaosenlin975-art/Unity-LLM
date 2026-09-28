@@ -114,7 +114,7 @@ namespace LLM.Runtime
 
             // 三槽攒成一条：Install 每次 AgentHost.Activate 都跑，一槽一条会被淹
             if (pending.Count > 0)
-                Log.Error(nameof(LLMRuntimeSettings), string.Join("; ", pending));
+                Log.Error(nameof(LLMRuntimeSettings), ZString.Join("; ", pending));
         }
 
         private static void InstallSlot<T>(string slot, string name, Func<bool> isDefault, Action<T> assign,
