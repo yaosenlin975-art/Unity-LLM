@@ -189,7 +189,7 @@ public async UniTask<string> AskAsync(string userText,
 
 The new parameter is **not** appended at the end, which makes the change breaking in a way the compiler cannot catch: an old positional call passing a third `string` (then `ephemeralContext`) still compiles as `string → string`, but that per-turn-changing text now sits in the stable slot — the first change point moves earlier, so everything behind it stops hitting the prefix cache while the persona and long-lived blocks in front keep hitting. Switch to named arguments, or re-check positions 3 and 4.
 
-Two rules carry over to every contributor: static sections are recomputed **only when the registration list changes**, so a contributor that gets destroyed without unregistering leaves its old text inside the snapshot until somebody registers or unregisters — the liveness check during rendering only guarantees no exception, not fresh text. The full layering (four content kinds, cache keys, ordering keys) is documented in `README.md` section 「世界/个体快照」 (Chinese) and in the **workspace** doc `docs/adr/ADR-030-world-vs-self-snapshot-cache.md` (not shipped with the package; its numbering is independent of this package's `Docs/decisions/` series — this package's own ADR-030 is "state stores configured per slot by type name").
+Two rules carry over to every contributor: static sections are recomputed **only when the registration list changes**, so a contributor that gets destroyed without unregistering leaves its old text inside the snapshot until somebody registers or unregisters — the liveness check during rendering only guarantees no exception, not fresh text.
 
 ---
 
@@ -333,6 +333,4 @@ Edit the three fields outside Play mode, or save the asset with `Ctrl+S` (SetDir
 - Outside Play mode, and in the sandbox, nothing pumps the wall clock (`Tick` is driven only by `AgentHost.Update`), so long actions in the editor are never cut off by timeout.
 - Only simple types can enter a schema; serialize structures into a string argument and parse them yourself.
 
-## Design docs
 
-Layering and the per-decision records (`agent-kernel-design.md`, `agent-tool-model-design.md`, `agent-tool-gating-design.md`, `agent-animation-actions-design.md`, `decisions/ADR-001~029`, …) ship with this package under `Docs/` — restored verbatim from the Learn project's old `Assets/Plugins/LLM/Docs/` on 2026-09-27, GUIDs unchanged. Write the ADR before changing architecture, not just the code.

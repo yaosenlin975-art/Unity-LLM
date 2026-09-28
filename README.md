@@ -349,8 +349,6 @@ public async UniTask<string> AskAsync(string userText,
 
 包外若有按位置传第三个 `string` 的旧调用（旧语义是 `ephemeralContext`），`string → string` 编译器抓不到——**它会照常编译通过，只是那段每轮都变的文本被放进了静态段**：变化点跟着前移，排在它后面的动态段与本轮之后的所有内容都不再命中前缀缓存（前面的人设与长期块仍然照旧命中，所以现象是"缓存收益莫名少了一半"，而不是全崩）。升级时改成命名实参，或自己核对第 3、4 位。生产侧唯一调用点是 `AgentCore`。
 
-`WorldSnapshotService` / `NpcAgentHost` 的取舍与拒绝理由见工程工作区 `docs/adr/ADR-030-world-vs-self-snapshot-cache.md`（**工作区文档，不随包分发，编号与本包 `Docs/decisions/` 序列独立**；本包自己的 ADR-030 是另一篇「状态存储按槽用类型全名配置」）。
-
 ## NPC 表现层（可选）
 
 `NpcAgentProfile_SO`（身份 / 性格 / 说话风格 / 目标与价值观 / 知识边界 / `InitialAffinity`）、`NpcAffinityController`（好感度与关系等级，可被游戏侧 `AdjustFromGame` 直接调）。动画后端由玩法层实现 `IAgentAnimationDriver`，本插件不引用任何动画类型；模型侧的出口是 `AgentAnimationTools` 的成员工具/动作（`list_animation_states` / `play_animation_state` / `set_animation_parameter`）。"说话时自动比划"的本地流式导演（切句 + 手势目录 + 关键词意图分类）已删除——说什么、配什么动作一律交回模型决定。`Demo/Npc/` 另给了一份接线参考：`NpcProximityGreeter`（玩家进打招呼范围时上报世界事件，本地不出台词，宿主 `RequireComponent` 收到 `NpcAgentHost`）；世界侧的在册表与视野查询都在 `Runtime/Agent/World/`（`WorldSnapshotService` + 轻量 `WorldObservable`），Demo 层不再有第二份表。
@@ -369,6 +367,4 @@ public async UniTask<string> AskAsync(string userText,
 - 非 Play 模式与沙盒里的核心不推墙钟（`Tick` 只由 `AgentHost.Update` 驱动），编辑器沙盒的长动作不会因超时被切。
 - 工具/动作只有简单类型能进 schema；复杂结构请序列化成 string 参数自己解析。
 
-## 设计文档
 
-分层形态、逐条决策与拒绝理由在 `Docs/`（`agent-kernel-design.md`、`agent-tool-model-design.md`、`agent-tool-gating-design.md`、`agent-animation-actions-design.md`、`decisions/ADR-001~029` 等），已随包分发——2026-09-27 自 Learn 旧插件 `Assets/Plugins/LLM/Docs/` 原样迁回，GUID 不变。改架构前先补 ADR，不要只改代码。
