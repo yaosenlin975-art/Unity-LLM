@@ -318,6 +318,4 @@ Edit the three fields outside Play mode, or save the asset with `Ctrl+S` (SetDir
 - Outside Play mode, and in the sandbox, nothing pumps the wall clock (`Tick` is driven only by `AgentHost.Update`), so long actions in the editor are never cut off by timeout.
 - Only simple types can enter a schema; serialize structures into a string argument and parse them yourself.
 
-## Design docs
 
-Layering and the per-decision records (`agent-kernel-design.md`, `agent-tool-model-design.md`, `agent-tool-gating-design.md`, `agent-animation-actions-design.md`, `decisions/ADR-0xx-*.md`, …) currently exist only in the framework project's copy of this plugin (`Unity-Framework/Assets/Plugins/LLM/Docs/`); they are not shipped in this folder. Write the ADR before changing architecture, not just the code.

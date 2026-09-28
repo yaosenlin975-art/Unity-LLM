@@ -319,6 +319,4 @@ public sealed class SaveSystemFactStore : IFactStore
 - 非 Play 模式与沙盒里的核心不推墙钟（`Tick` 只由 `AgentHost.Update` 驱动），编辑器沙盒的长动作不会因超时被切。
 - 工具/动作只有简单类型能进 schema；复杂结构请序列化成 string 参数自己解析。
 
-## 设计文档
 
-分层形态、逐条决策与拒绝理由在 `Docs/`（`agent-kernel-design.md`、`agent-tool-model-design.md`、`agent-tool-gating-design.md`、`agent-animation-actions-design.md`、`decisions/ADR-0xx-*.md` 等）。这些文档目前只在框架工程的插件副本里（`Unity-Framework/Assets/Plugins/LLM/Docs/`），本目录未随包分发。改架构前先补 ADR，不要只改代码。
