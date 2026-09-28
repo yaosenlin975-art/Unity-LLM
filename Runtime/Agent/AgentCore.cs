@@ -259,46 +259,67 @@ namespace LLM.Runtime.Agent
                     ZString.Format("{0} 本轮请求失败: {1}", SessionId, ex.Message));
             }
 
-            FinishTurn(input, answer, outcome);
+            try
+            {
+                FinishTurn(input, answer, outcome);
+            }
+            catch (Exception ex)
+            {
+                // .Forget() 会吞掉这里的异常，至少留日志；DrainPending 已在 FinishTurn 的 finally 里跑过
+                Log.Warning(nameof(AgentCore),
+                    ZString.Format("{0} FinishTurn 异常: {1}", SessionId, ex.Message));
+            }
         }
 
         private void FinishTurn(string input, string answer, EAgentOutcome outcome)
         {
-            turnInFlight = false;
-            executor.ClearActionSlot();
-
-            // 被新输入顶掉：产出丢弃、不写历史，只把半截气泡收住
-            if (activeGeneration != turnGeneration)
+            try
             {
-                UnfulfilledPromiseFallback();
-                var staleText = turnText.Length > 0 ? turnText.ToString() : answer;
-                output?.OnTurnFinished(staleText, EAgentOutcome.Stale);
+                turnInFlight = false;
+                executor.ClearActionSlot();
+
+                // 被新输入顶掉：产出丢弃、不写历史，只把半截气泡收住
+                if (activeGeneration != turnGeneration)
+                {
+                    UnfulfilledPromiseFallback();
+                    var staleText = turnText.Length > 0 ? turnText.ToString() : answer;
+                    output?.OnTurnFinished(staleText, EAgentOutcome.Stale);
+                    AgentTrace.Emit(SessionId, EAgentTraceKind.TurnFinished,
+                        ZString.Format("Stale | {0}", staleText), roundSerial);
+                    return;
+                }
+
+                if (outcome == EAgentOutcome.Completed)
+                {
+                    if (executor.AbortRequested) outcome = EAgentOutcome.LoopAborted;
+                }
+
+                // 先收承诺兜底再取 finalText：兜底句必须进历史，
+                // 必须赶在 ResolveFinalText 拷贝 turnText 之前，否则只进 UI 不进历史
+                string fallbackLine = null;
+                if (outcome == EAgentOutcome.Timeout || outcome == EAgentOutcome.LoopAborted)
+                    fallbackLine = UnfulfilledPromiseFallback();
+
+                var finalText = ResolveFinalText(answer, outcome);
+
+                // answer 非空时 ResolveFinalText 只认 answer，兜底句要手动并入历史
+                if (!string.IsNullOrEmpty(fallbackLine) && !string.IsNullOrEmpty(answer) && answer != fallbackLine)
+                    finalText = ZString.Concat(finalText, "\n", fallbackLine);
+
+                // 每一轮都入历史，含 LoopAborted：玩家那句话不能凭空消失，否则下一轮像没听见。
+                // 被硬拦的轮产出不可信，但那句话是可信的——它决定下一轮的上下文对不对
+                session.Context.AddRound(input, finalText);
+                SaveHistory();
+
                 AgentTrace.Emit(SessionId, EAgentTraceKind.TurnFinished,
-                    ZString.Format("Stale | {0}", staleText), roundSerial);
-                DrainPending();
-                return;
+                    ZString.Format("{0} | {1}", outcome, finalText), roundSerial);
+                output?.OnTurnFinished(finalText, outcome);
             }
-
-            if (outcome == EAgentOutcome.Completed)
+            finally
             {
-                if (executor.AbortRequested) outcome = EAgentOutcome.LoopAborted;
+                // 中途任何一段抛异常都不能吞掉 pending：否则新输入永远停在队列里
+                DrainPending();
             }
-
-            var finalText = ResolveFinalText(answer, outcome);
-
-            // 每一轮都入历史，含 LoopAborted：玩家那句话不能凭空消失，否则下一轮像没听见。
-            // 被硬拦的轮产出不可信，但那句话是可信的——它决定下一轮的上下文对不对
-            session.Context.AddRound(input, finalText);
-            SaveHistory();
-
-            AgentTrace.Emit(SessionId, EAgentTraceKind.TurnFinished,
-                ZString.Format("{0} | {1}", outcome, finalText), roundSerial);
-            output?.OnTurnFinished(finalText, outcome);
-
-            if (outcome == EAgentOutcome.Timeout || outcome == EAgentOutcome.LoopAborted)
-                UnfulfilledPromiseFallback();
-
-            DrainPending();
         }
 
         private void DrainPending()
@@ -441,17 +462,18 @@ namespace LLM.Runtime.Agent
             return null;
         }
 
-        /// <summary>说了却没做成，且本轮产出已无意义：内核立即播一次兜底句</summary>
-        private void UnfulfilledPromiseFallback()
+        /// <summary>说了却没做成，且本轮产出已无意义：内核立即播一次兜底句。返回兜底句供并入历史，无则 null</summary>
+        private string UnfulfilledPromiseFallback()
         {
-            if (promises.Count == 0) return;
+            if (promises.Count == 0) return null;
 
             promises.Clear();
             var line = PickFallback();
-            if (string.IsNullOrEmpty(line)) return;
+            if (string.IsNullOrEmpty(line)) return null;
 
             turnText.Append(line);
             output?.OnToken(line);
+            return line;
         }
 
         private string PickFallback()

@@ -44,7 +44,7 @@ namespace LLM.Tests.Editor.Agent
             profile.SpeechStyle = "短句";
             profile.GoalsAndValues = "守护村庄";
             profile.KnowledgeBoundary = "只知道本村";
-            profile.PersonaPrompt = "额外规则";
+            profile.PersonaPrompt = "应当被忽略的额外规则";
 
             var prompt = profile.BuildSystemPrompt();
 
@@ -64,9 +64,10 @@ namespace LLM.Tests.Editor.Agent
             StringAssert.Contains("默认简短作答", prompt);
             StringAssert.Contains("你的名字：铁匠", prompt);
             StringAssert.Contains("铁匠身份", prompt);
-            StringAssert.Contains("额外规则", prompt);
             Assert.Less(prompt.IndexOf("你就是设定中的人物"), prompt.IndexOf("铁匠身份"));
-            Assert.Less(prompt.IndexOf("铁匠身份"), prompt.IndexOf("额外规则"));
+            // ADR-033：NPC 不再注入 PersonaPrompt
+            StringAssert.DoesNotContain("额外稳定规则", prompt);
+            StringAssert.DoesNotContain("应当被忽略的额外规则", prompt);
         }
 
         [Test]

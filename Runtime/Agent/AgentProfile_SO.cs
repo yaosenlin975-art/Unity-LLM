@@ -100,7 +100,7 @@ namespace LLM.Runtime.Agent
             }
 
 #if UNITY_EDITOR
-            var baseKey = "agent-" + Fnv1a(PersonaPrompt).ToString("x8");
+            var baseKey = ZString.Concat("agent-", Fnv1a(KeySeed).ToString("x8"));
             if (!IsKeyTaken(baseKey))
             {
                 ProfileKey = baseKey;
@@ -109,7 +109,7 @@ namespace LLM.Runtime.Agent
             {
                 for (int suffix = 2; suffix < 100; suffix++)
                 {
-                    var candidate = baseKey + "-" + suffix;
+                    var candidate = ZString.Concat(baseKey, "-", suffix);
                     if (!IsKeyTaken(candidate))
                     {
                         ProfileKey = candidate;
@@ -120,11 +120,11 @@ namespace LLM.Runtime.Agent
 
             // 序号兜底用尽（理论上不会）：退回随机尾巴
             if (string.IsNullOrEmpty(ProfileKey))
-                ProfileKey = baseKey + "-" + Guid.NewGuid().ToString("N").Substring(0, 4);
+                ProfileKey = ZString.Concat(baseKey, "-", Guid.NewGuid().ToString("N").Substring(0, 4));
 #else
             // 构建内没有资产遍历能力，跳过查重，但仍按人设派生：SessionId = ProfileKey#instanceId 就是存储键，
             // 随机派生等于每次启动换一座空档案，历史/事实槽/好感全部静默丢失
-            var hash = Fnv1a(PersonaPrompt).ToString("x8");
+            var hash = Fnv1a(KeySeed).ToString("x8");
             var buildKey = ZString.Concat("agent-", hash);
             for (int suffix = 2; suffix < 100 && knownKeys.Contains(buildKey); suffix++)
                 buildKey = ZString.Concat("agent-", hash, "-", suffix);
@@ -172,6 +172,12 @@ namespace LLM.Runtime.Agent
                 return (long)hash;
             }
         }
+
+        /// <summary>
+        /// 自动派生 ProfileKey 的种子（ADR-012）。基类用人设文本；派生类可换成自己的结构化设定，
+        /// 让 key 与真正的人设内容挂钩（NPC 见 ADR-033）。
+        /// </summary>
+        protected virtual string KeySeed => PersonaPrompt;
 
         public virtual string BuildSystemPrompt()
         {

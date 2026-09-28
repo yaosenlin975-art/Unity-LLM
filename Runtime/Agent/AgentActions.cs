@@ -218,14 +218,18 @@ namespace LLM.Runtime.Agent
             AgentActionContext ctx)
         {
             JObject args = null;
-            try
+            if (!string.IsNullOrWhiteSpace(argsJson) && argsJson != "{}")
             {
-                if (!string.IsNullOrWhiteSpace(argsJson) && argsJson != "{}")
+                try
+                {
                     args = JObject.Parse(argsJson);
-            }
-            catch (Exception)
-            {
-                args = null;
+                }
+                catch (Exception ex)
+                {
+                    // 坏 JSON 必须失败返回：catch 后置 args=null 再 BindArguments，
+                    // 会静默用默认值执行动作（0/""/false），等于用错误参数落地副作用
+                    return AgentActionResult.Failure(ZString.Format("参数非法，不是合法 JSON（{0}）", ex.Message));
+                }
             }
 
             var values = BindArguments(def, args, ctx);
